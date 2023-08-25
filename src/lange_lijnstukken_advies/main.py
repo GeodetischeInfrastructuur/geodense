@@ -124,3 +124,5 @@ def add_nodes(in_f, out_f):
         if not isinstance(out_f, str): # when string filepath:str is passed in, otherwise it is filelike object, then seek to start to enable reading again
             out_f.seek(0)
 
+if __name__ == "__main__":
+    main()

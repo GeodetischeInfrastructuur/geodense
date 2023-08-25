@@ -5,6 +5,8 @@ Eventual goal is to implement the following [document](https://geoforum.nl/uploa
 - validator - check if geometries do not contain line segments longer than threshold
 - geometry-fixer - fix geometries with line segments longer than threshold
 
+## Development
+
 Install/uninstall for development:
 
 
@@ -13,3 +15,22 @@ pip install -e .
 
 pip uninstall lange-lijnstukken-advies
 ```
+
+
+## Usage CLI
+
+```sh
+lla --help
+usage: lange-lijnstukken-advies (lla) [-h] input_file output_file
+
+Geometrie controle en reparatie tbv CRS transformatie van ETRS89 en RD
+
+positional arguments:
+  input_file
+  output_file
+
+options:
+  -h, --help   show this help message and exit
+```
+
+
