@@ -1,0 +1,42 @@
+[project]
+name = "lange-lijnstukken-advies"
+description = ""
+keywords = []
+license = { text = "MIT" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+]
+readme = { file = "./README.md", content-type = "text/markdown" }
+dependencies = [
+]
+requires-python = ">=3.11.4"
+dynamic = ["version"]
+
+[project.urls]
+repository = "https://github.com/GeodetischeInfrastructuur/lange-lijnstukken-advies-lib"
+
+[project.optional-dependencies]
+dev = ["black", "autoflake", "isort", "mypy"]
+
+
+[build-system]
+requires = ["setuptools>=61.0", "setuptools-git-versioning<2"]
+build-backend = "setuptools.build_meta"
+
+[project.scripts]
+lla = "lange_lijnstukken_advies.main:main"
+
+[tool.setuptools-git-versioning]
+enabled = true
+
+
+[tool.setuptools.packages.find]
+where = ["src"]  # list of folders that contain the packages (["."] by default)
+include = ["lange_lijnstukken_advies*"]  # package names should match these glob patterns (["*"] by default)
+namespaces = false  # to disable scanning PEP 420 namespaces (true by default)
+
+# [tool.setuptools.package-data]
+# "coordinates_transformation_api.assets" = ["*"]
+# "coordinates_transformation_api.assets.static" = ["*"]
