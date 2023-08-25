@@ -21,16 +21,15 @@ pip uninstall lange-lijnstukken-advies
 
 ```sh
 lla --help
-usage: lange-lijnstukken-advies (lla) [-h] input_file output_file
+usage: lange-lijnstukken-advies (lla) [-h] {fix,validate} ...
 
 Geometrie controle en reparatie tbv CRS transformatie van ETRS89 en RD
 
-positional arguments:
-  input_file
-  output_file
+commands:
+  {fix,validate}
 
 options:
-  -h, --help   show this help message and exit
+  -h, --help      show this help message and exit
 ```
 
 

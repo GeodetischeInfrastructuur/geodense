@@ -67,21 +67,40 @@ def add_nodes_exceeding_treshold(metric_lookup_table: dict[int, dict[int,float]]
                 ft
             )
 
+def fix(args):
+    add_nodes(args.input_file,  args.output_file)
+    with open( args.output_file, 'r') as f:
+        print(json.dumps(json.load(f), indent=4))
+
+def validate(args):
+     validate_nodes(args.input_file, args.treshold)
+
 
 def main():
     parser = argparse.ArgumentParser(
                     prog='lange-lijnstukken-advies (lla)',
-                    description='Geometrie controle en reparatie tbv CRS transformatie van ETRS89 en RD',
+                    description='Geometry validation and fixing for CRS transformation between ETRS89 and RD',
                     epilog='')
 
-    parser.add_argument("input_file")
-    parser.add_argument("output_file")
+
+    subparsers = parser.add_subparsers()
+
+    fix_parser = subparsers.add_parser('fix')
+    fix_parser.add_argument("input_file", type=str)
+    fix_parser.add_argument("output_file" , type=str)
+    fix_parser.set_defaults(func=fix)
+
+    validate_parser = subparsers.add_parser('validate')
+    validate_parser.add_argument("input_file", type=str)
+    validate_parser.add_argument("treshold", type=int)
+    validate_parser.set_defaults(func=validate)
+    parser._subparsers.title = "commands"
     args = parser.parse_args()
 
+    args.func(args)
+
     ## cli args
-    add_nodes(args.input_file,  args.output_file)
-    with open( args.output_file, 'r') as f:
-        print(json.dumps(json.load(f), indent=4))
+
 
     ## json args example
 
@@ -123,6 +142,48 @@ def add_nodes(in_f, out_f):
             add_nodes_exceeding_treshold(metric_lookup, 5000, src, dst)
         if not isinstance(out_f, str): # when string filepath:str is passed in, otherwise it is filelike object, then seek to start to enable reading again
             out_f.seek(0)
+
+def check_segments(metric_lookup_table: dict[int, dict[int,float]], treshold:float) -> dict[int, list[int]]:
+    segments_exceeding: dict[int, list[int]] = {}
+    for i in metric_lookup_table:
+        for j in metric_lookup_table[i]:
+            metric = metric_lookup_table[i][j]
+            if metric > treshold:
+                if not i in segments_exceeding:
+                    segments_exceeding[i] = []
+                segments_exceeding[i].append(j)
+    return segments_exceeding
+
+
+
+def validate_nodes(in_f, treshold: int=1000):
+
+    with fiona.open(in_f) as src:
+        profile = src.profile
+        assert profile['schema']['geometry'] == "LineString", f"only LineString geometryTypes supported, received geometryType {profile['schema']['geometry']}" # TODO: add support for polygon geometry types
+        metric_lookup = get_distance_metric_lookup(src)
+
+        result = {
+            k_o: {
+                k_i: v_i
+                for k_i, v_i in v_o.items()
+                if v_i > treshold
+            }
+            for k_o, v_o in metric_lookup.items()
+        }
+        result = {k: v for k, v in result.items() if v } # remove empty dict items
+
+        if len(result.keys()) == 0:
+            exit(0)
+        else:
+            report = ""
+
+            for key in result:
+                ft_report = f"line segment(s) exceeding threshold: features[{key}].geometry.segments[{', '.join([str(x) for x  in result[key].keys()])}]\n"
+                report+= ft_report
+            print(report)
+            exit(1)
+
 
 if __name__ == "__main__":
     main()
