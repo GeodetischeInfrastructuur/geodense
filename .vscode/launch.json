@@ -10,8 +10,9 @@
             "request": "launch",
             "module": "lange_lijnstukken_advies.main",
             "args": [
+                "fix",
                 "${workspaceFolder}/tests/data/linestrings.json",
-                "${workspaceFolder}/tests/data/linestrings-out.json"
+                "${workspaceFolder}/out-data/linestrings-out.json",
             ],
             "justMyCode": true
         }
