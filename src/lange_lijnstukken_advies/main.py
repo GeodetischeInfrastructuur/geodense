@@ -6,8 +6,9 @@ from typing import Tuple
 import fiona
 from pyproj import CRS, Geod, Transformer
 
-TRANFORM_CRS = "EPSG:4326"
-ELLIPS = "WGS84"
+TRANFORM_CRS = "EPSG:4258"
+ELLIPS = "GRS80"
+
 
 def transform_point(source_crs:str, target_crs:str, val: Tuple[float,float]):
     source_crs_crs = CRS.from_authority(*source_crs.split(":"))
@@ -19,7 +20,6 @@ def get_distance_metric_lookup(src: fiona.Collection, crs: str):
     metric_lookup_table: dict[int, dict[int,float]] = {}
     for i, ft in enumerate(src):
         geom = ft.geometry
-
         distance_geom: dict[int,float] = {}
         for j in range(0,len(geom.coordinates)-1):
             a = geom.coordinates[j]
@@ -42,7 +42,7 @@ def interpolate_geodetic(a, b, max_segment_length, input_crs: str):
     return [transform_point(TRANFORM_CRS, input_crs, (lon,lat)) for lon,lat in zip(r.lons, r.lats)]
 
 
-def add_point_recursively(geom: fiona.Geometry, coord_index:int, treshold:float, input_crs: str):
+def add_vertices_to_line_segment(geom: fiona.Geometry, coord_index:int, treshold:float, input_crs: str):
     coordinates = geom.coordinates
     a = coordinates[coord_index]
     b = coordinates[coord_index+1]
@@ -52,15 +52,15 @@ def add_point_recursively(geom: fiona.Geometry, coord_index:int, treshold:float,
     return len(p)
 
 
-def add_nodes_exceeding_treshold(metric_lookup_table: dict[int, dict[int,float]], treshold:float, src: fiona.Collection, dst: fiona.Collection, input_crs:str):
+def add_vertices_exceeding_treshold(metric_lookup_table: dict[int, dict[int,float]], max_segment_length:float, src: fiona.Collection, dst: fiona.Collection, input_crs:str):
     for i, ft in enumerate(src):
         if i in metric_lookup_table:
             geom: fiona.Geometry = ft.geometry
             added_nodes = 0
             for j in metric_lookup_table[i]:
                 metric = metric_lookup_table[i][j]
-                if metric > treshold:
-                    added_nodes+=add_point_recursively(geom, j+added_nodes, treshold, input_crs) # j+added_nodes, since we are inserting new nodes in the geometry, so shift the index by the nr of inserted nodes
+                if metric > max_segment_length:
+                    added_nodes+=add_vertices_to_line_segment(geom, j+added_nodes, max_segment_length, input_crs) # j+added_nodes, since we are inserting new nodes in the geometry, so shift the index by the nr of inserted nodes
             dst.write(
                 fiona.Feature(geometry=geom, properties=ft.properties)
             )
@@ -80,14 +80,14 @@ def get_crs_from_json(json):
     return None
 
 
-def add_nodes_geojson_dict(in_geojson:dict) -> dict:
+def add_vertices_geojson_dict(in_geojson:dict) -> dict:
     json_str = json.dumps(in_geojson)
     with io.BytesIO(b"") as out_f, io.BytesIO(json_str.encode("utf-8")) as in_f:
-        add_nodes(in_f, out_f)
+        add_vertices(in_f, out_f)
         return json.load(out_f)
 
 
-def add_nodes(in_f, out_f, max_segment_length):
+def add_vertices(in_f, out_f, max_segment_length):
     with open(in_f, 'r') as in_file:
         data = json.load(in_file)
     crs = get_crs_from_json(data)
@@ -96,23 +96,20 @@ def add_nodes(in_f, out_f, max_segment_length):
 
     with fiona.open(in_f, crs=crs) as src:
         profile = src.profile
-
-
         assert profile['schema']['geometry'] == "LineString", f"only LineString geometryTypes supported, received geometryType {profile['schema']['geometry']}" # TODO: add support for polygon geometry types
         with fiona.open(out_f, "w", **profile) as dst:
             metric_lookup = get_distance_metric_lookup(src, crs)
-            add_nodes_exceeding_treshold(metric_lookup, max_segment_length, src, dst, crs)
+            add_vertices_exceeding_treshold(metric_lookup, max_segment_length, src, dst, crs)
         if not isinstance(out_f, str): # when string filepath:str is passed in, otherwise it is filelike object, then seek to start to enable reading again
             out_f.seek(0)
 
 
 # TODO: improve handling stdout from function
-def validate_nodes(in_f, max_segment_length):
+def check_density(in_f, max_segment_length):
     with fiona.open(in_f) as src:
         profile = src.profile
         assert profile['schema']['geometry'] == "LineString", f"only LineString geometryTypes supported, received geometryType {profile['schema']['geometry']}" # TODO: add support for polygon geometry types
         metric_lookup = get_distance_metric_lookup(src)
-
         result = {
             k_o: {
                 k_i: v_i
@@ -132,14 +129,14 @@ def validate_nodes(in_f, max_segment_length):
             print(report)
             return False
 
-def fix_cmd(args):
-    add_nodes(args.input_file,  args.output_file, args.max_segment_length)
+def densify_cmd(args):
+    add_vertices(args.input_file,  args.output_file, args.max_segment_length)
     with open( args.output_file, 'r') as f:
         print(json.dumps(json.load(f), indent=4))
 
 
-def validate_cmd(args):
-    result =validate_nodes(args.input_file, args.max_segment_length)
+def check_density_cmd(args):
+    result =check_density(args.input_file, args.max_segment_length)
     if result:
         exit(0)
     else:
@@ -149,21 +146,20 @@ def validate_cmd(args):
 def main():
     parser = argparse.ArgumentParser(
                     prog='lange-lijnstukken-advies (lla)',
-                    description='Geometry validation and fixing for CRS transformation between ETRS89 and RD',
+                    description='Check density and densify geometries for accurate CRS transformations',
                     epilog='')
 
-
     subparsers = parser.add_subparsers()
-    fix_parser = subparsers.add_parser('fix')
+    fix_parser = subparsers.add_parser('densify')
     fix_parser.add_argument("input_file", type=str)
     fix_parser.add_argument("output_file" , type=str)
     fix_parser.add_argument("--max-segment-length","-m", type=int, default=200, help='max allowed segment length in meters')
-    fix_parser.set_defaults(func=fix_cmd)
+    fix_parser.set_defaults(func=densify_cmd)
 
-    validate_parser = subparsers.add_parser('validate')
+    validate_parser = subparsers.add_parser('check-density')
     validate_parser.add_argument("input_file", type=str)
     validate_parser.add_argument("--max-segment-length","-m", type=int, default=200, help='max allowed segment length in meters')
-    validate_parser.set_defaults(func=validate_cmd)
+    validate_parser.set_defaults(func=check_density_cmd)
     parser._subparsers.title = "commands"
     args = parser.parse_args()
     args.func(args)
