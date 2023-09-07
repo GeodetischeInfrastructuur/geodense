@@ -1,9 +1,9 @@
-# lange-lijnstukken-advies-lib
+# nsgi-dense
 
 Eventual goal is to implement the following [document](https://geoforum.nl/uploads/default/original/2X/c/c0795baa683bf3845c866ae4c576a880455be02a.pdf) as:
 
-- validator - check if geometries do not contain line segments longer than threshold
-- geometry-fixer - fix geometries with line segments longer than threshold
+- check-density - check if geometries do not contain line segments longer than the max-line-segment threshold
+- densify - add vertices to line segments of geometries that exceed the max-line-segment threshold
 
 ## Development
 
@@ -12,24 +12,24 @@ Install/uninstall for development:
 
 ```sh
 pip install -e .
-
-pip uninstall lange-lijnstukken-advies
+pip uninstall nsgi-dense
 ```
-
 
 ## Usage CLI
 
 ```sh
-lla --help
-usage: lange-lijnstukken-advies (lla) [-h] {fix,validate} ...
+usage: dense [-h] {densify,check-density} ...
 
-Geometrie controle en reparatie tbv CRS transformatie van ETRS89 en RD
+Check density of, and densify geometries using the geodetic great circle calculation for
+accurate CRS transformations
 
 commands:
-  {fix,validate}
+  {densify,check-density}
 
 options:
-  -h, --help      show this help message and exit
+  -h, --help            show this help message and exit
+
+Created by https://www.nsgi.nl/
 ```
 
 
