@@ -5,14 +5,67 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Module",
+            "name": "Python: densify linestrings",
             "type": "python",
             "request": "launch",
-            "module": "lange_lijnstukken_advies.main",
+            "module": "nsgi_dense.main",
             "args": [
-                "fix",
+                "densify",
                 "${workspaceFolder}/tests/data/linestrings.json",
                 "${workspaceFolder}/out-data/linestrings-out.json",
+                "--max-segment-length", "5000"
+            ],
+            "justMyCode": true
+        },
+        {
+            "name": "Python: densify linestrings (GPKG)",
+            "type": "python",
+            "request": "launch",
+            "module": "nsgi_dense.main",
+            "args": [
+                "densify",
+                "${workspaceFolder}/tests/data/linestrings.gpkg",
+                "${workspaceFolder}/out-data/polygonen-out.gpkg",
+                "--max-segment-length", "5000",
+                "--layer", "polygonen"
+            ],
+            "justMyCode": true
+        },
+        {
+            "name": "Python: densify multipolygon",
+            "type": "python",
+            "request": "launch",
+            "module": "nsgi_dense.main",
+            "args": [
+                "densify",
+                "${workspaceFolder}/tests/data/multipolygon.json",
+                "${workspaceFolder}/out-data/multipolygon-out.json",
+                "--max-segment-length", "5000"
+            ],
+            "justMyCode": true
+        },
+        {
+            "name": "Python: densify polygons",
+            "type": "python",
+            "request": "launch",
+            "module": "nsgi_dense.main",
+            "args": [
+                "densify",
+                "${workspaceFolder}/tests/data/polygons.json",
+                "${workspaceFolder}/out-data/polygons-out.json",
+                "--max-segment-length", "5000"
+            ],
+            "justMyCode": true
+        },
+        {
+            "name": "Python: check density polygons",
+            "type": "python",
+            "request": "launch",
+            "module": "nsgi_dense.main",
+            "args": [
+                "check-density",
+                "${workspaceFolder}/tests/data/polygons.json",
+                "--max-segment-length", "5000"
             ],
             "justMyCode": true
         }

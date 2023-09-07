@@ -1,6 +1,6 @@
 [project]
-name = "lange-lijnstukken-advies"
-description = ""
+name = "nsgi-dense"
+description = "Check density of, and densify geospatial geometries using the geodetic great circle calculation for accurate CRS transformations"
 keywords = []
 license = { text = "MIT" }
 classifiers = [
@@ -15,7 +15,7 @@ requires-python = ">=3.11.4"
 dynamic = ["version"]
 
 [project.urls]
-repository = "https://github.com/GeodetischeInfrastructuur/lange-lijnstukken-advies-lib"
+repository = "https://github.com/GeodetischeInfrastructuur/nsgi-dense"
 
 [project.optional-dependencies]
 dev = ["black", "autoflake", "isort", "mypy"]
@@ -26,7 +26,7 @@ requires = ["setuptools>=61.0", "setuptools-git-versioning<2"]
 build-backend = "setuptools.build_meta"
 
 [project.scripts]
-lla = "lange_lijnstukken_advies.main:main"
+dense = "nsgi_dense.main:main"
 
 [tool.setuptools-git-versioning]
 enabled = true
@@ -34,7 +34,7 @@ enabled = true
 
 [tool.setuptools.packages.find]
 where = ["src"]  # list of folders that contain the packages (["."] by default)
-include = ["lange_lijnstukken_advies*"]  # package names should match these glob patterns (["*"] by default)
+include = ["nsgi_dense*"]  # package names should match these glob patterns (["*"] by default)
 namespaces = false  # to disable scanning PEP 420 namespaces (true by default)
 
 # [tool.setuptools.package-data]
