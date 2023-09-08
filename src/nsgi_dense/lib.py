@@ -219,6 +219,18 @@ def crs_is_geographic(crs_string: str) -> bool:
     return crs.is_geographic
 
 
+def densify_geometry_coordinates(
+    coordinates, crs, max_segment_length, densify_in_projection
+):
+    return transfrom_linestrings_in_geometry_coordinates(
+        coordinates,
+        crs,
+        max_segment_length,
+        add_vertices_exceeding_max_segment_length,
+        densify_in_projection,
+    )
+
+
 def densify_geospatial_file(
     input_file, output_file, max_segment_length, layer="", densify_in_projection=False
 ):
@@ -245,11 +257,10 @@ def densify_geospatial_file(
         ) as dst:
             for i, ft in enumerate(src):
                 try:
-                    coordinates_t = transfrom_linestrings_in_geometry_coordinates(
+                    coordinates_t = densify_geometry_coordinates(
                         ft.geometry.coordinates,
                         crs,
                         max_segment_length,
-                        add_vertices_exceeding_max_segment_length,
                         densify_in_projection,
                     )
                     geom = fiona.Geometry(coordinates=coordinates_t, type=geom_type)
