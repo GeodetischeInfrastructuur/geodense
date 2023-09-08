@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+set -u
+
+print_message() {
+    padding_char=">"
+    message=$1
+    indent_level="${2:-1}"
+    level=${3:-NOCOLOR}
+    prepend_newline=${4:-false}
+    case "$level" in
+    "INFO")
+        color='\033[0;32m'
+        ;;
+    "WARNING")
+        color='\033[0;33m'
+        ;;
+    "ERROR")
+        color='\033[0;31m'
+        ;;
+    *)
+        color='\033[0;37m'
+        ;;
+    esac
+    if [[ $prepend_newline == true ]]; then echo ""; fi
+    printf "${color}%s %s\n\033[0;37m" $(printf "${padding_char}%.0s" $(seq 1 "$indent_level")) "$message"
+}
+
+command_available() {
+    command="$1"
+    if ! command -v "$command" &>/dev/null; then
+        print_message "ERROR: ${command} could not be found - commit aborted" 2 "ERROR" false
+        exit 1
+    fi
+}
+
+# DO NOT RUN PRE-COMMIT HOOK WHEN REBASING
+BRANCH_NAME=$(git branch | grep '*' | sed 's/* //')
+if [[ $BRANCH_NAME == *"no branch"* ]]
+then
+  exit 0
+fi
+
+command_available "mypy"
+print_message "pre-commit - running mypy static type checking" 1 "" true
+if ! mypy src;then
+    print_message "mypy static type check failed - commit aborted" 1 "ERROR" true
+    exit 1
+fi
+
+
+command_available "black"
+print_message "pre-commit - running Black formatting" 1 "" true
+FILES=$(git diff --cached --name-only --diff-filter=ACMR | sed 's| |\\ |g' | grep -E "\.py$")
+[ -z "$FILES" ] && exit 0
+echo "$FILES" | xargs black --stdin-filename "{}"
+
+command_available "autoflake"
+print_message "pre-commit - running Autoflake formatting" 1 "" true
+echo "$FILES" | xargs autoflake --remove-all-unused-imports --in-place --remove-unused-variables
+
+command_available "isort"
+print_message "pre-commit - running isort formatting" 1 "" true
+echo "$FILES" | xargs isort --overwrite-in-place
+
+echo "$FILES" | xargs git add
