@@ -1,4 +1,5 @@
-# nsgi-dense
+# geodense
+
 
 Eventual goal is to implement the following [document](https://geoforum.nl/uploads/default/original/2X/c/c0795baa683bf3845c866ae4c576a880455be02a.pdf) as:
 
@@ -12,13 +13,20 @@ Install/uninstall for development:
 
 ```sh
 pip install -e .
-pip uninstall nsgi-dense
+pip uninstall geodense
+```
+
+
+Check test coverage (install `coverage` with `pip install coverage`):
+
+```sh
+coverage run --source=src/geodense -m pytest -v tests && coverage report -m
 ```
 
 ## Usage CLI
 
 ```sh
-usage: dense [-h] {densify,check-density} ...
+usage: geodense [-h] {densify,check-density} ...
 
 Check density of, and densify geometries using the geodetic great circle calculation for
 accurate CRS transformations
