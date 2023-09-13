@@ -8,7 +8,7 @@
             "name": "Python: densify linestrings",
             "type": "python",
             "request": "launch",
-            "module": "nsgi_dense.main",
+            "module": "geodense.main",
             "args": [
                 "densify",
                 "${workspaceFolder}/tests/data/linestrings.json",
@@ -21,7 +21,7 @@
             "name": "Python: densify linestrings (GPKG)",
             "type": "python",
             "request": "launch",
-            "module": "nsgi_dense.main",
+            "module": "geodense.main",
             "args": [
                 "densify",
                 "${workspaceFolder}/tests/data/linestrings.gpkg",
@@ -35,7 +35,7 @@
             "name": "Python: densify multipolygon",
             "type": "python",
             "request": "launch",
-            "module": "nsgi_dense.main",
+            "module": "geodense.main",
             "args": [
                 "densify",
                 "${workspaceFolder}/tests/data/multipolygon.json",
@@ -48,7 +48,7 @@
             "name": "Python: densify polygons",
             "type": "python",
             "request": "launch",
-            "module": "nsgi_dense.main",
+            "module": "geodense.main",
             "args": [
                 "densify",
                 "${workspaceFolder}/tests/data/polygons.json",
@@ -61,7 +61,7 @@
             "name": "Python: check density polygons",
             "type": "python",
             "request": "launch",
-            "module": "nsgi_dense.main",
+            "module": "geodense.main",
             "args": [
                 "check-density",
                 "${workspaceFolder}/tests/data/polygons.json",
