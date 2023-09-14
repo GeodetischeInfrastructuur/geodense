@@ -10,8 +10,6 @@ from geodense.lib import (densify_geometry_coordinates,
                           densify_geospatial_file,
                           get_intermediate_nr_points_and_segment_length)
 
-from .fixtures import (linestring_feature, point_feature,  # fmt: skip
-                       polygon_feature_with_holes, test_dir)
 
 # TODO: add 3D feature to test
 
@@ -132,7 +130,8 @@ def test_densify_geospatial_file_in_proj_exc(test_dir):
 
     with pytest.raises(
         ValueError,
-        match=r"densify_in_projection can only be used with projected coordinates reference systems, crs .+ is a geographic crs",
+        match=(r"densify_in_projection can only be used with projected coordinates "
+        r"reference systems, crs .+ is a geographic crs"),
     ):
         densify_geospatial_file(
             os.path.join(test_dir, "data", in_file), out_file, "", None, True
