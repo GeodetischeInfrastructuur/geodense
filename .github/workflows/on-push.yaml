@@ -7,7 +7,7 @@ jobs:
   docker_tests:
 
     runs-on: ubuntu-latest
-    name: Docker | python=${{ matrix.python-version }}
+    name: Linting and Tests | python=${{ matrix.python-version }}
     env:
       DEBIAN_FRONTEND: noninteractive
     strategy:
