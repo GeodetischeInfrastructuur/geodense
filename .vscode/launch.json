@@ -15,7 +15,7 @@
                 "${workspaceFolder}/out-data/linestrings-out.json",
                 "--max-segment-length", "5000"
             ],
-            "justMyCode": true
+            "justMyCode": false
         },
         {
             "name": "Python: densify linestrings (GPKG)",
@@ -29,7 +29,7 @@
                 "--max-segment-length", "5000",
                 "--layer", "polygonen"
             ],
-            "justMyCode": true
+            "justMyCode": false
         },
         {
             "name": "Python: densify multipolygon",
@@ -42,7 +42,7 @@
                 "${workspaceFolder}/out-data/multipolygon-out.json",
                 "--max-segment-length", "5000"
             ],
-            "justMyCode": true
+            "justMyCode": false
         },
         {
             "name": "Python: densify polygons",
@@ -55,7 +55,7 @@
                 "${workspaceFolder}/out-data/polygons-out.json",
                 "--max-segment-length", "5000"
             ],
-            "justMyCode": true
+            "justMyCode": false
         },
         {
             "name": "Python: check density polygons",
@@ -67,7 +67,7 @@
                 "${workspaceFolder}/tests/data/polygons.json",
                 "--max-segment-length", "5000"
             ],
-            "justMyCode": true
+            "justMyCode": false
         }
     ]
 }

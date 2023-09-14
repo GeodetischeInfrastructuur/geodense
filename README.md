@@ -8,14 +8,14 @@ Eventual goal is to implement the following [document](https://geoforum.nl/uploa
 
 ## Development
 
-Install/uninstall for development:
+Requires Python v3.9 or higher (due to dependency on pyproj v3.6.0).
 
+Install/uninstall for development:
 
 ```sh
 pip install -e .
 pip uninstall geodense
 ```
-
 
 Check test coverage (install `coverage` with `pip install coverage`):
 
