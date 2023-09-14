@@ -3,10 +3,6 @@ import os
 
 from geodense.lib import check_density, check_density_geometry_coordinates
 
-from .fixtures import linestring_feature  # fmt: skip
-from .fixtures import (linestring_feature_pass_5000, point_feature,
-                       polygon_feature_with_holes, test_dir)
-
 
 def test_check_density(test_dir):
     report = check_density(
@@ -24,8 +20,8 @@ def test_check_density_not_pass(linestring_feature):
     assert len(result) > 0
 
 
-def test_check_density_pass_linestring(linestring_feature_pass_5000):
-    feature = json.loads(linestring_feature_pass_5000)
+def test_check_density_pass_linestring(linestring_feature_5000):
+    feature = json.loads(linestring_feature_5000)
     result = []
     check_density_geometry_coordinates(
         feature["geometry"]["coordinates"], "EPSG:28992", 5000, result

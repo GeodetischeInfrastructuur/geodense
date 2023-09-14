@@ -47,19 +47,11 @@ if ! mypy src;then
     exit 1
 fi
 
-
-command_available "black"
-print_message "pre-commit - running Black formatting" 1 "" true
+command_available "ruff"
+print_message "pre-commit - running ruff  linting and formatting on all files" 1 "" true
 FILES=$(git diff --cached --name-only --diff-filter=ACMR | sed 's| |\\ |g' | grep -E "\.py$")
 [ -z "$FILES" ] && exit 0
-echo "$FILES" | xargs black --stdin-filename "{}"
+echo "$FILES" | xargs ruff --fix
 
-command_available "autoflake"
-print_message "pre-commit - running Autoflake formatting" 1 "" true
-echo "$FILES" | xargs autoflake --remove-all-unused-imports --in-place --remove-unused-variables
-
-command_available "isort"
-print_message "pre-commit - running isort formatting" 1 "" true
-echo "$FILES" | xargs isort --overwrite-in-place
 
 echo "$FILES" | xargs git add

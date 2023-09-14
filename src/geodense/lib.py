@@ -16,11 +16,6 @@ SUPPORTED_GEOM_TYPES = [
 ]
 DEFAULT_MAX_SEGMENT_LENGTH = 1000
 
-"""
-Densify functions
-"""
-
-
 def transfrom_linestrings_in_geometry_coordinates(
     geometry_coordinates,
     input_crs,
@@ -34,7 +29,7 @@ def transfrom_linestrings_in_geometry_coordinates(
 
     if is_linestring_geom(
         geometry_coordinates
-    ):  # check if at linestring level in coordinates array - list[tuple[float,float,...]] (when calling with Fiona geometry) | list[list[float]]  (when calling with GeoJSON geometry)
+    ):
         geometry_coordinates = transform_fun(
             geometry_coordinates, max_segment_length, input_crs, densify_in_projection
         )
@@ -48,7 +43,17 @@ def transfrom_linestrings_in_geometry_coordinates(
         ]
 
 
-def is_linestring_geom(geometry_coordinates) -> bool:
+def is_linestring_geom(geometry_coordinates: list) -> bool:
+    """Check if coordinates are of linestring geometry type.
+        - Fiona linestring coordinates are of type: list[tuple[float,float,...]])
+        - GeoJSON linestring coordinates are of type: list[list[float]]
+
+    Args:
+        geometry_coordinates (list): Fiona or GeoJSON coordinates sequence
+
+    Returns:
+        bool: if geometry_coordinates is linestring geometry return True else False
+    """
     return (
         len(geometry_coordinates) > 0
         and isinstance(geometry_coordinates[0], Sequence)
@@ -100,7 +105,8 @@ def densify_geospatial_file(
 
         if densify_in_projection and crs_is_geographic(crs):
             raise ValueError(
-                f"densify_in_projection can only be used with projected coordinates reference systems, crs {crs} is a geographic crs"
+                f"densify_in_projection can only be used with \
+projected coordinates reference systems, crs {crs} is a geographic crs"
             )
 
         geom_type_check(geom_type)
@@ -231,11 +237,6 @@ def add_vertices_exceeding_max_segment_length(
     return linestring
 
 
-"""
-Density Check code
-"""
-
-
 def check_density_linestring(
     linestring_coordinates, crs: str, max_segment_length, indices
 ):
@@ -298,20 +299,17 @@ def get_hr_report(report: list[tuple[list[int], float]], max_segment_length):
     if len(report) == 0:
         return ""
 
-    hr_report = f"feature(s) detected which contain line-segments(s) exceed max-segment-length ({max_segment_length}):\n"
+    hr_report = f"feature(s) detected which contain line-segments(s) \
+exceed max-segment-length ({max_segment_length}):\n"
     for i, item in enumerate(report):
         ft_index, coordinates_indices = item[0][:1], item[0][1:]
         distance = item[1]
-        ft_report = f"  - features{ft_index}.geometry.segments[{', '.join([str(x) for x  in coordinates_indices])}], distance: {distance}"
+        ft_report = f"  - features{ft_index}.geometry.segments\
+ [{', '.join([str(x) for x  in coordinates_indices])}], distance: {distance}"
         if len(report) - 1 != i:
             ft_report += "\n"
         hr_report += ft_report
     return hr_report
-
-
-"""
-Util functions
-"""
 
 
 def get_valid_layer_name(input_file, layer_name=""):
@@ -320,7 +318,9 @@ def get_valid_layer_name(input_file, layer_name=""):
 
     Args:
         input_file (str): filepath to geospatial file
-        layer_name (str, optional): layer_name to check, when left empty function checks if there is only 1 layer in the file. Defaults to "".
+        layer_name (str, optional): layer_name to check, when left empty function
+                                    checks if there is only 1 layer in the file.
+                                    Defaults to "".
 
     Raises:
         ValueError: raised in the following conditions:
@@ -337,7 +337,8 @@ def get_valid_layer_name(input_file, layer_name=""):
             return layers[0]
         elif len(layers) > 1:
             raise ValueError(
-                f"input_file {input_file} contains more than 1 layers: {layers}, specifiy which layer to use with optional layer argument"
+                f"input_file {input_file} contains more than 1 layer: \
+{layers}, specify which layer to use with optional layer argument"
             )  # case len(layers) == 0 not possible, results in fiona.DriverError
     else:  # layer_name != ""
         if layer_name in layers:

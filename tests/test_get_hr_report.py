@@ -2,7 +2,6 @@ import json
 
 from geodense.lib import check_density_geometry_coordinates, get_hr_report
 
-from .fixtures import linestring_feature_multiple_linesegments  # fmt: skip
 
 
 def test_get_empty_hr_report(linestring_feature_multiple_linesegments):
