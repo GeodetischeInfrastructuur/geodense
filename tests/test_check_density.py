@@ -3,6 +3,10 @@ import os
 
 from geodense.lib import check_density, check_density_geometry_coordinates
 
+from .fixtures import linestring_feature  # fmt: skip
+from .fixtures import (linestring_feature_pass_5000, point_feature,
+                       polygon_feature_with_holes, test_dir)
+
 
 def test_check_density(test_dir):
     report = check_density(

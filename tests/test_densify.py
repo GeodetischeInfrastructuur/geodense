@@ -10,6 +10,9 @@ from geodense.lib import (densify_geometry_coordinates,
                           densify_geospatial_file,
                           get_intermediate_nr_points_and_segment_length)
 
+from .fixtures import (linestring_feature, point_feature,  # fmt: skip
+                       polygon_feature_with_holes, test_dir)
+
 # TODO: add 3D feature to test
 
 

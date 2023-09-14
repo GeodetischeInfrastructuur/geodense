@@ -4,6 +4,8 @@ import pytest
 
 from geodense.lib import get_valid_layer_name
 
+from .fixtures import test_dir  # fmt: skip
+
 
 def test_get_layer_name(test_dir):
     l_name = get_valid_layer_name(os.path.join(test_dir, "data/polygons.json"), "")

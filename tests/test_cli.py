@@ -8,7 +8,7 @@ from geodense.main import main
 
 
 @patch("geodense.main.densify_cmd")
-def test_cli_command(mock_command):
+def test_cli_densify_cmd(mock_command):
     TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 
     in_file = "linestrings.json"
@@ -37,7 +37,7 @@ def test_cli_command(mock_command):
 
 
 @patch("geodense.main.check_density_cmd")
-def test_cli_command(mock_command):
+def test_cli_check_density_cmd(mock_command):
     TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 
     in_file = "linestrings.json"
