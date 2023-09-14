@@ -1,5 +1,5 @@
 from contextlib import nullcontext as does_not_raise
-from typing import Any, Literal
+from typing import Any, Literal, Union
 
 import pytest
 from _pytest.python_api import RaisesContext
@@ -27,7 +27,7 @@ def test_geom_type_check(
         "Point",
         "MultiPoint",
     ],
-    expectation: Any | RaisesContext[ValueError],
+    expectation: Union[Any ,RaisesContext[ValueError]],
 ):
     with expectation:
         assert geom_type_check(geom_type) is None

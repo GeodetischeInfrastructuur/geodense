@@ -1,6 +1,8 @@
+import json
 import math
 import os
-from typing import Sequence, Tuple
+import re
+from typing import Sequence, Tuple, Union
 
 import fiona
 from pyproj import CRS, Geod, Transformer
@@ -20,7 +22,7 @@ def transfrom_linestrings_in_geometry_coordinates(
     geometry_coordinates,
     input_crs,
     transform_fun,
-    max_segment_length: int | None = None,
+    max_segment_length: Union[int , None] = None,
     densify_in_projection: bool = False,
 ):
     max_segment_length = abs(max_segment_length or DEFAULT_MAX_SEGMENT_LENGTH)
@@ -71,7 +73,7 @@ def raise_e_if_point_geom(geometry_coordinates):
 def densify_geometry_coordinates(
     coordinates,
     input_crs,
-    max_segment_length: int | None = None,
+    max_segment_length: Union[int , None] = None,
     densify_in_projection: bool = False,
 ):
     max_segment_length = abs(max_segment_length or DEFAULT_MAX_SEGMENT_LENGTH)
@@ -89,7 +91,7 @@ def densify_geospatial_file(
     input_file,
     output_file,
     layer="",
-    max_segment_length: int | None = None,
+    max_segment_length: Union[int , None] = None,
     densify_in_projection: bool = False,
 ):
     max_segment_length = abs(max_segment_length or DEFAULT_MAX_SEGMENT_LENGTH)
@@ -357,6 +359,10 @@ def geom_type_check(geom_type):
 
 
 def crs_is_geographic(crs_string: str) -> bool:
+
+    if re.match(r"\{'init'\:\s'.*'\}", crs_string):
+        crs_string = json.loads(crs_string.replace("'", '"'))["init"].upper()
+
     crs = CRS.from_authority(*crs_string.split(":"))
     return crs.is_geographic
 

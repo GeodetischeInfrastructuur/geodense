@@ -1,4 +1,5 @@
 import argparse
+import sys
 
 from rich_argparse import RichHelpFormatter
 
@@ -53,6 +54,7 @@ using the geodetic great circle calculation for accurate CRS transformations",
         "-l",
         type=str,
         help="layer to use in multi-layer geospatial input files",
+        default=""
     )
     densify_parser.add_argument(
         "--in-projection",
@@ -80,11 +82,20 @@ using the geodetic great circle calculation for accurate CRS transformations",
         "-l",
         type=str,
         help="layer to use in multi-layer geospatial input files",
+        default=""
     )
     check_density_parser.set_defaults(func=check_density_cmd)
     parser._subparsers.title = "commands"
     args = parser.parse_args()
-    args.func(args)
+
+    try:
+        args.func(args)
+    except AttributeError:
+        parser.print_help()
+        sys.exit(0)
+
+
+
 
 if __name__ == "__main__":
     main()

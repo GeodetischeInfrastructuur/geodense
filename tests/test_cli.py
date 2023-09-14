@@ -2,7 +2,7 @@ import os
 import tempfile
 
 from cli_test_helpers import ArgvContext
-from mock import patch
+from unittest.mock import patch
 
 from geodense.main import main
 
