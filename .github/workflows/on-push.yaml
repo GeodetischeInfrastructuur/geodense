@@ -32,6 +32,10 @@ jobs:
           python${{ matrix.python-version }} -m pip install --upgrade pip
           python${{ matrix.python-version }} -m pip install --force-reinstall -e ".[dev]"
 
+      - name: Lint with black
+        run: |
+          python${{ matrix.python-version }} -m black --check .
+
       - name: Lint with ruff
         run: |
           python${{ matrix.python-version }} -m ruff -v .
