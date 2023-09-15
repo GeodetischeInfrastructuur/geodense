@@ -50,7 +50,12 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v2
         with:
+          name: coverage-report
           path: '/tmp/htmlcov'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v2
+        with:
+          artifact_name: coverage-report
+        
+          
