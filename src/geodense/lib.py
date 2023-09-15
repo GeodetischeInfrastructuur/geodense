@@ -2,7 +2,8 @@ import json
 import math
 import os
 import re
-from typing import Sequence, Tuple, Union
+from collections.abc import Sequence
+from typing import Union
 
 import fiona
 from pyproj import CRS, Geod, Transformer
@@ -368,7 +369,7 @@ def crs_is_geographic(crs_string: str) -> bool:
     return crs.is_geographic
 
 
-def transform_point(source_crs: str, target_crs: str, val: Tuple[float, float]):
+def transform_point(source_crs: str, target_crs: str, val: tuple[float, float]):
     source_crs_crs = CRS.from_authority(*source_crs.split(":"))
     target_crs_crs = CRS.from_authority(*target_crs.split(":"))
     transformer = Transformer.from_crs(source_crs_crs, target_crs_crs, always_xy=True)
