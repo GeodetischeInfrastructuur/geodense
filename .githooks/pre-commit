@@ -59,6 +59,6 @@ echo "$FILES" | xargs black --stdin-filename {}
 
 command_available "ruff"
 print_message "pre-commit - running ruff  linting" 1 "INFO" true
-echo "$FILES" | xargs ruff
+echo "$FILES" | xargs ruff --fix
 
 echo "$FILES" | xargs git add

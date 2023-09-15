@@ -1,14 +1,14 @@
 # geodense
 
+[![Endpoint Badge](https://img.shields.io/endpoint?url=https%3A%2F%2Fgeodetischeinfrastructuur.github.io%2Fgeodense%2Fbadge.json&style=flat-square&logo=pytest&logoColor=white)](https://geodetischeinfrastructuur.github.io/geodense/)
 
-Eventual goal is to implement the following [document](https://geoforum.nl/uploads/default/original/2X/c/c0795baa683bf3845c866ae4c576a880455be02a.pdf) as:
+Python library and CLI tool to **check density** and **densify** linestring and polygon geometries using the geodetic great circle calculation.
 
-- check-density - check if geometries do not contain line segments longer than the max-line-segment threshold
-- densify - add vertices to line segments of geometries that exceed the max-line-segment threshold
+Implementation based on [*Eenduidige transformatie van grenzen tussen ETRS89 en RD*](https://geoforum.nl/uploads/default/original/2X/c/c0795baa683bf3845c866ae4c576a880455be02a.pdf)
 
 ## Development
 
-Requires Python v3.9 or higher (due to dependency on pyproj v3.6.0).
+Requires Python v3.9 or higher (due to dependency on [pyproj](https://pyproj4.github.io/pyproj/stable/) v3.6.0).
 
 Install/uninstall for development:
 
@@ -17,7 +17,7 @@ pip install -e .
 pip uninstall geodense
 ```
 
-Check test coverage (install `coverage` with `pip install coverage`):
+Check test coverage (install `coverage` with `pip install coverage` ):
 
 ```sh
 coverage run --source=src/geodense -m pytest -v tests && coverage report -m
@@ -25,19 +25,20 @@ coverage run --source=src/geodense -m pytest -v tests && coverage report -m
 
 ## Usage CLI
 
-```sh
+Use either `geodense` or the short `gden` alias:
+
+```
+$ geodense --help
+
 usage: geodense [-h] {densify,check-density} ...
 
-Check density of, and densify geometries using the geodetic great circle calculation for
-accurate CRS transformations
+Check density of, and densify geometries using the geodetic great circle calculation for accurate CRS transformations
 
-commands:
+Commands:
   {densify,check-density}
 
-options:
+Options:
   -h, --help            show this help message and exit
 
 Created by https://www.nsgi.nl/
 ```
-
-

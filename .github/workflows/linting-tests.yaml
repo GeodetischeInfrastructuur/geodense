@@ -4,16 +4,14 @@ on:
   pull_request:
 
 jobs:
-  docker_tests:
+  linting_and_tests:
+    name: Linting and Tests | python=${{ matrix.python-version }}
 
     runs-on: ubuntu-latest
-    name: Linting and Tests | python=${{ matrix.python-version }}
-    env:
-      DEBIAN_FRONTEND: noninteractive
+
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11"]
-        # python-version: ["3.9"]
+        python-version: ["3.9"]
 
     steps:
       - uses: actions/checkout@v4
@@ -32,10 +30,14 @@ jobs:
           python${{ matrix.python-version }} -m pip install --upgrade pip
           python${{ matrix.python-version }} -m pip install --force-reinstall -e ".[dev]"
 
+      - name: Lint with black
+        run: |
+          python${{ matrix.python-version }} -m black --check .
+
       - name: Lint with ruff
         run: |
           python${{ matrix.python-version }} -m ruff -v .
 
-      - name: Test with pytest
+      - name: Test with pytest and generate coverage report
         run: |
-          python${{ matrix.python-version }} -m pytest -v tests
+          python${{ matrix.python-version }} -m coverage run --source=src/geodense -m pytest -v tests

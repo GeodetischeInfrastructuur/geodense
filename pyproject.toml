@@ -22,7 +22,7 @@ dynamic = ["version"]
 repository = "https://github.com/GeodetischeInfrastructuur/geodense"
 
 [project.optional-dependencies]
-dev = ["ruff", "black", "mypy", "pytest", "cli-test-helpers"]
+dev = ["ruff", "black", "mypy", "pytest", "cli-test-helpers", "coverage"]
 
 [build-system]
 requires = ["setuptools>=61.0", "setuptools-git-versioning<2"]
@@ -119,7 +119,7 @@ line-length = 120
 # Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
-target-version = "py38"
+target-version = "py39"
 
 # disable rules for tests
 [tool.ruff.per-file-ignores]
