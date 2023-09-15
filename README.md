@@ -1,5 +1,9 @@
 # geodense
 
+[![Endpoint Badge](https://img.shields.io/endpoint?url=https%3A%2F%2Fgeodetischeinfrastructuur.github.io%2Fgeodense%2Fbadge.json&style=flat-square&logo=pytest&logoColor=white)](https://geodetischeinfrastructuur.github.io/geodense/)
+
+https://geodetischeinfrastructuur.github.io/geodense/badge.json 
+
 Python library and CLI tool to **check density** and **densify** linestring and polygon geometries using the geodetic great circle calculation.
 
 Implementation based on [*Eenduidige transformatie van grenzen tussen ETRS89 en RD*](https://geoforum.nl/uploads/default/original/2X/c/c0795baa683bf3845c866ae4c576a880455be02a.pdf)

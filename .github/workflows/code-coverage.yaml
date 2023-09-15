@@ -1,0 +1,50 @@
+name: Run linting and unit tests
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  docker_tests:
+
+    runs-on: ubuntu-latest
+    name: Generate Test Coverage Report
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    strategy:
+      matrix:
+        python-version: ["3.9"]
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup conda
+        uses: s-weigand/setup-conda@v1
+        with:
+          update-conda: true
+          python-version: ${{ matrix.python-version }}
+          conda-channels: anaconda, conda-forge
+
+      - name: Conda install dependencies
+        run: conda install fiona==1.9.4
+
+      - name: Install dependencies
+        run: |
+          python${{ matrix.python-version }} -m pip install --upgrade pip
+          python${{ matrix.python-version }} -m pip install --force-reinstall -e ".[dev]"
+
+      - name: Generate coverage report
+        run: |
+          python${{ matrix.python-version }} -m coverage run --source=src/geodense -m pytest -v tests
+          python${{ matrix.python-version }} -m coverage html -d htmlcov
+          python${{ matrix.python-version }} -m coverage json -o htmlcov/coverage.json
+          python${{ matrix.python-version }} util.py gen-cov-badge htmlcov/coverage.json htmlcov/badge.json
+
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: coverage-report  # default: gh-pages
+          publish_dir: ./out_html
+
+
