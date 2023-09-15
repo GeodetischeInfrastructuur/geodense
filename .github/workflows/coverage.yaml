@@ -54,7 +54,7 @@ jobs:
           path: '/tmp/htmlcov'
   deploy:
     name: Deploy to gh-pages
-    
+    needs: generate_coverage
     permissions:
       contents: read
       pages: write
