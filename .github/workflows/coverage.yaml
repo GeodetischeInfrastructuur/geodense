@@ -1,17 +1,19 @@
-name: Run linting and unit tests
+name: Generate coverage report
 
 on:
   push:
     branches:
-      - main
+    - main
 
 jobs:
-  docker_tests:
+  coverage:
+    name: Generate Coverage Report | python=${{ matrix.python-version }}
+
+    permissions:
+      contents: write
 
     runs-on: ubuntu-latest
-    name: Generate Test Coverage Report
-    env:
-      DEBIAN_FRONTEND: noninteractive
+
     strategy:
       matrix:
         python-version: ["3.9"]
@@ -33,18 +35,18 @@ jobs:
           python${{ matrix.python-version }} -m pip install --upgrade pip
           python${{ matrix.python-version }} -m pip install --force-reinstall -e ".[dev]"
 
-      - name: Generate coverage report
+      - name: Test with pytest and generate coverage report
         run: |
           python${{ matrix.python-version }} -m coverage run --source=src/geodense -m pytest -v tests
-          python${{ matrix.python-version }} -m coverage html -d htmlcov
-          python${{ matrix.python-version }} -m coverage json -o htmlcov/coverage.json
-          python${{ matrix.python-version }} util.py gen-cov-badge htmlcov/coverage.json htmlcov/badge.json
+          python${{ matrix.python-version }} -m coverage html -d /tmp/htmlcov
+          python${{ matrix.python-version }} -m coverage json -o /tmp/htmlcov/coverage.json
+          python${{ matrix.python-version }} util.py gen-cov-badge /tmp/htmlcov/coverage.json /tmp/htmlcov/badge.json
+          ls -lah /tmp/htmlcov
 
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Deploy coverage report on gh-pages
+        uses: peaceiris/actions-gh-pages@v3.9.3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_branch: coverage-report  # default: gh-pages
-          publish_dir: ./out_html
-
-
+          publish_branch: coverage-report
+          publish_dir: /tmp/htmlcov
+          full_commit_message: ${{ github.event.head_commit.message }}

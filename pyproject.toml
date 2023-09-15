@@ -22,7 +22,7 @@ dynamic = ["version"]
 repository = "https://github.com/GeodetischeInfrastructuur/geodense"
 
 [project.optional-dependencies]
-dev = ["ruff", "black", "mypy", "pytest", "cli-test-helpers"]
+dev = ["ruff", "black", "mypy", "pytest", "cli-test-helpers", "coverage"]
 
 [build-system]
 requires = ["setuptools>=61.0", "setuptools-git-versioning<2"]
