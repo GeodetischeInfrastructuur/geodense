@@ -8,7 +8,7 @@ def test_check_density(test_dir):
     report = check_density(
         os.path.join(test_dir, "data/linestrings.json"), 1000, "lijnen"
     )
-    assert len(report) > 0
+    assert len(report) > 0, f"expected len(report) to >0, was {len(report)}"
 
 
 def test_check_density_not_pass(linestring_feature):

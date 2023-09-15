@@ -18,20 +18,19 @@ SUPPORTED_GEOM_TYPES = [
 ]
 DEFAULT_MAX_SEGMENT_LENGTH = 1000
 
+
 def transfrom_linestrings_in_geometry_coordinates(
     geometry_coordinates,
     input_crs,
     transform_fun,
-    max_segment_length: Union[int , None] = None,
+    max_segment_length: Union[int, None] = None,
     densify_in_projection: bool = False,
 ):
     max_segment_length = abs(max_segment_length or DEFAULT_MAX_SEGMENT_LENGTH)
 
     raise_e_if_point_geom(geometry_coordinates)
 
-    if is_linestring_geom(
-        geometry_coordinates
-    ):
+    if is_linestring_geom(geometry_coordinates):
         geometry_coordinates = transform_fun(
             geometry_coordinates, max_segment_length, input_crs, densify_in_projection
         )
@@ -73,7 +72,7 @@ def raise_e_if_point_geom(geometry_coordinates):
 def densify_geometry_coordinates(
     coordinates,
     input_crs,
-    max_segment_length: Union[int , None] = None,
+    max_segment_length: Union[int, None] = None,
     densify_in_projection: bool = False,
 ):
     max_segment_length = abs(max_segment_length or DEFAULT_MAX_SEGMENT_LENGTH)
@@ -91,7 +90,7 @@ def densify_geospatial_file(
     input_file,
     output_file,
     layer="",
-    max_segment_length: Union[int , None] = None,
+    max_segment_length: Union[int, None] = None,
     densify_in_projection: bool = False,
 ):
     max_segment_length = abs(max_segment_length or DEFAULT_MAX_SEGMENT_LENGTH)
@@ -251,7 +250,7 @@ def check_density_linestring(
         g = Geod(ellps=ELLIPS)
         _, _, geod_dist = g.inv(*a_t, *b_t, return_back_azimuth=True)  # type: ignore
         if geod_dist > (max_segment_length + 0.001):
-            report_indices = indices + [k]
+            report_indices = [*indices, k]
             result.append((report_indices, geod_dist))
     return result
 
@@ -261,8 +260,10 @@ def check_density_geometry_coordinates(
     input_crs,
     max_segment_length,
     result,
-    indices=[],
+    indices=None,
 ):
+    if indices is None:
+        indices = []
     raise_e_if_point_geom(geometry_coordinates)
     if is_linestring_geom(
         geometry_coordinates
@@ -274,7 +275,7 @@ def check_density_geometry_coordinates(
     else:
         [
             check_density_geometry_coordinates(
-                e, input_crs, max_segment_length, result, indices + [i]
+                e, input_crs, max_segment_length, result, [*indices, i]
             )
             for i, e in enumerate(geometry_coordinates)
         ]
@@ -301,8 +302,10 @@ def get_hr_report(report: list[tuple[list[int], float]], max_segment_length):
     if len(report) == 0:
         return ""
 
-    hr_report = f"feature(s) detected which contain line-segments(s) \
-exceed max-segment-length ({max_segment_length}):\n"
+    hr_report = (
+        f"feature(s) detected which contain line-segments(s) "
+        f"exceed max-segment-length ({max_segment_length}):\n"
+    )
     for i, item in enumerate(report):
         ft_index, coordinates_indices = item[0][:1], item[0][1:]
         distance = item[1]
@@ -342,24 +345,22 @@ def get_valid_layer_name(input_file, layer_name=""):
                 f"input_file {input_file} contains more than 1 layer: \
 {layers}, specify which layer to use with optional layer argument"
             )  # case len(layers) == 0 not possible, results in fiona.DriverError
-    else:  # layer_name != ""
-        if layer_name in layers:
-            return layer_name
-        else:
-            raise ValueError(
-                f"layer_name {layer_name} not found in file {input_file}, layers: {', '.join(layers)}"
-            )
+    elif layer_name in layers:
+        return layer_name
+    else:
+        raise ValueError(
+            f"layer_name {layer_name} not found in file {input_file}, layers: {', '.join(layers)}"
+        )
 
 
 def geom_type_check(geom_type):
     if geom_type not in SUPPORTED_GEOM_TYPES:
         raise ValueError(
-            f"Unsupported GeometryType  {geom_type}, supported GeometryTypes are: {' '.join(SUPPORTED_GEOM_TYPES)}"
+            f"Unsupported GeometryType {geom_type}, supported GeometryTypes are: {' '.join(SUPPORTED_GEOM_TYPES)}"
         )
 
 
 def crs_is_geographic(crs_string: str) -> bool:
-
     if re.match(r"\{'init'\:\s'.*'\}", crs_string):
         crs_string = json.loads(crs_string.replace("'", '"'))["init"].upper()
 

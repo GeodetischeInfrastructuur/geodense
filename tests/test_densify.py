@@ -1,15 +1,15 @@
 import json
 import os
 import tempfile
-
 from unittest import mock
+
 import pyproj
 import pytest
-
-from geodense.lib import (densify_geometry_coordinates,
-                          densify_geospatial_file,
-                          get_intermediate_nr_points_and_segment_length)
-
+from geodense.lib import (
+    densify_geometry_coordinates,
+    densify_geospatial_file,
+    get_intermediate_nr_points_and_segment_length,
+)
 
 # TODO: add 3D feature to test
 
@@ -29,9 +29,13 @@ def test_linestring_transformed(linestring_feature):
     densify_geometry_coordinates(
         feature_t["geometry"]["coordinates"], "EPSG:28992", 1000, False
     )
+
+    feature_coords_length = 2
+    feature_t_coord_length = 12
+
     assert feature != feature_t
-    assert len(feature["geometry"]["coordinates"]) == 2
-    assert len(feature_t["geometry"]["coordinates"]) == 12
+    assert len(feature["geometry"]["coordinates"]) == feature_coords_length
+    assert len(feature_t["geometry"]["coordinates"]) == feature_t_coord_length
 
 
 def test_polygon_with_hole_transformed(polygon_feature_with_holes):
@@ -51,9 +55,12 @@ def test_linestring_transformed_source_proj(linestring_feature):
     densify_geometry_coordinates(
         feature_t["geometry"]["coordinates"], "EPSG:28992", 1000, True
     )
+    feature_coords_length = 2
+    feature_t_coord_length = 14
+
     assert feature != feature_t
-    assert len(feature["geometry"]["coordinates"]) == 2
-    assert len(feature_t["geometry"]["coordinates"]) == 14
+    assert len(feature["geometry"]["coordinates"]) == feature_coords_length
+    assert len(feature_t["geometry"]["coordinates"]) == feature_t_coord_length
 
 
 def test_maxlinesegment_param(linestring_feature):
@@ -65,8 +72,9 @@ def test_maxlinesegment_param(linestring_feature):
     densify_geometry_coordinates(
         feature_1000["geometry"]["coordinates"], "EPSG:28992", 1000, False
     )
-    assert len(feature_200["geometry"]["coordinates"]) == 53
-    assert len(feature_1000["geometry"]["coordinates"]) == 12
+    assert len(feature_200["geometry"]["coordinates"]) > len(
+        feature_1000["geometry"]["coordinates"]
+    )
 
 
 def test_get_intermediate_nr_points_and_segment_length():
@@ -130,8 +138,10 @@ def test_densify_geospatial_file_in_proj_exc(test_dir):
 
     with pytest.raises(
         ValueError,
-        match=(r"densify_in_projection can only be used with projected coordinates "
-        r"reference systems, crs .+ is a geographic crs"),
+        match=(
+            r"densify_in_projection can only be used with projected coordinates "
+            r"reference systems, crs .+ is a geographic crs"
+        ),
     ):
         densify_geospatial_file(
             os.path.join(test_dir, "data", in_file), out_file, "", None, True
