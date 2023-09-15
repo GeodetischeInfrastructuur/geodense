@@ -8,10 +8,12 @@ on:
 jobs:
   coverage:
     name: Generate Coverage Report | python=${{ matrix.python-version }}
-
+    
     permissions:
-      contents: write
-
+      contents: read
+      pages: write
+      id-token: write
+      
     runs-on: ubuntu-latest
 
     strategy:
@@ -43,10 +45,12 @@ jobs:
           python${{ matrix.python-version }} util.py gen-cov-badge /tmp/htmlcov/coverage.json /tmp/htmlcov/badge.json
           ls -lah /tmp/htmlcov
 
-      - name: Deploy coverage report on gh-pages
-        uses: peaceiris/actions-gh-pages@v3.9.3
+      - name: Setup Pages
+        uses: actions/configure-pages@v3
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v2
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_branch: coverage-report
-          publish_dir: /tmp/htmlcov
-          full_commit_message: ${{ github.event.head_commit.message }}
+          path: '/tmp/htmlcov'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
