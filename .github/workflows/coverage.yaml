@@ -40,13 +40,13 @@ jobs:
       - name: Test with pytest and generate coverage report
         run: |
           python${{ matrix.python-version }} -m coverage run --source=src/geodense -m pytest -v tests
-          python${{ matrix.python-version }} -m coverage html -d /tmp/htmlcov
-          python${{ matrix.python-version }} -m coverage json -o /tmp/htmlcov/coverage.json
-          python${{ matrix.python-version }} util.py gen-cov-badge /tmp/htmlcov/coverage.json /tmp/htmlcov/badge.json
-          ls -lah /tmp/htmlcov
+          python${{ matrix.python-version }} -m coverage html -d ./htmlcov
+          python${{ matrix.python-version }} -m coverage json -o ./htmlcov/coverage.json
+          python${{ matrix.python-version }} util.py gen-cov-badge ./htmlcov/coverage.json ./htmlcov/badge.json
+          ls -lah ./htmlcov
 
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: /tmp/htmlcov # The folder the action should deploy.
+          folder: htmlcov # The folder the action should deploy.
           branch: coverage-report
