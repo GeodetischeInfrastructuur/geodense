@@ -1,7 +1,6 @@
 import os
 
 import pytest
-
 from geodense.lib import get_valid_layer_name
 
 
@@ -21,8 +20,10 @@ def test_get_layer_name_not_existing(test_dir):
 def test_get_layer_name_default_from_multi_file(test_dir):
     with pytest.raises(
         ValueError,
-        match=r"input_file .+ contains more than 1 layer: .+, specify " +
-r"which layer to use with optional layer argument",
+        match=(
+            r"input_file .+ contains more than 1 layer: .+, "
+            r"specify which layer to use with optional layer argument"
+        ),
     ):
         _ = get_valid_layer_name(os.path.join(test_dir, "data/linestrings.gpkg"), "")
 
