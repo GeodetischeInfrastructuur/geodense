@@ -27,7 +27,7 @@ coverage run --source=src/geodense -m pytest -v tests && coverage report -m
 
 Use either `geodense` or the short `gden` alias:
 
-```
+```sh
 $ geodense --help
 
 usage: geodense [-h] {densify,check-density} ...
