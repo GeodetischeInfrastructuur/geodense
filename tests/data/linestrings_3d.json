@@ -1,0 +1,31 @@
+{
+    "type": "FeatureCollection",
+    "name": "lijnen",
+    "crs": {
+        "type": "name",
+        "properties": {
+            "name": "urn:ogc:def:crs:EPSG::7415"
+        }
+    },
+    "features": [
+        {
+            "type": "Feature",
+            "properties": {},
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                    [
+                        156264.906359842570964,
+                        601302.588919493253343,
+                        10.101010321413241
+                    ],
+                    [
+                        165681.964475793502061,
+                        605544.313164469087496,
+                        30.101010321413241
+                    ]
+                ]
+            }
+        }
+    ]
+}

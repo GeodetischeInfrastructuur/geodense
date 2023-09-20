@@ -9,8 +9,20 @@ def test_dir():
 
 
 @pytest.fixture()
+def linestring_d10_feature(test_dir):
+    with open(os.path.join(test_dir, "data", "linestring_feature_d10.json")) as f:
+        return f.read()
+
+
+@pytest.fixture()
 def linestring_feature(test_dir):
     with open(os.path.join(test_dir, "data", "linestring_feature.json")) as f:
+        return f.read()
+
+
+@pytest.fixture()
+def linestring_3d_feature(test_dir):
+    with open(os.path.join(test_dir, "data", "linestring_3d_feature.json")) as f:
         return f.read()
 
 
