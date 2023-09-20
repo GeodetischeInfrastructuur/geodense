@@ -17,7 +17,9 @@ SUPPORTED_GEOM_TYPES = [
     "MultiPolygon",
     "MultiLineString",
 ]
-DEFAULT_MAX_SEGMENT_LENGTH = 1000
+DEFAULT_MAX_SEGMENT_LENGTH = 200
+DEFAULT_PRECISION_GEOGRAPHIC = 9
+DEFAULT_PRECISION_PROJECTED = 4
 
 
 def transfrom_linestrings_in_geometry_coordinates(
@@ -154,6 +156,7 @@ def get_intermediate_nr_points_and_segment_length(
 
 
 def interpolate_src_proj(a, b, max_segment_length):
+    """Interpolate intermediate points between points a and b, with segment_length < max_segment_length. Only returns intermediate points."""
     dist = math.sqrt((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2)  # Pythagoras
     if dist <= max_segment_length:
         return [a, b]
@@ -172,13 +175,12 @@ def interpolate_src_proj(a, b, max_segment_length):
             p = tuple(p_point.coords[0])
             new_points.append(p)
         return [
-            a,
             *new_points,
-            b,
         ]
 
 
-def interpolate_geodetic(a, b, max_segment_length, input_crs: str):
+def interpolate_geodesic(a, b, max_segment_length, input_crs: str):
+    """geodesic interpolate intermediate points between points a and b, with segment_length < max_segment_length. Only returns intermediate points."""
     a_t = transform_point(input_crs, TRANFORM_CRS, a)
     b_t = transform_point(input_crs, TRANFORM_CRS, b)
     g = Geod(ellps=ELLIPS)
@@ -197,6 +199,7 @@ def interpolate_geodetic(a, b, max_segment_length, input_crs: str):
             del_s=new_max_segment_length,
             return_back_azimuth=True,
         )  # type: ignore
+
         return [
             transform_point(TRANFORM_CRS, input_crs, (lon, lat))
             for lon, lat in zip(r.lons, r.lats)
@@ -212,15 +215,25 @@ def add_vertices_to_line_segment(
 ):
     a = ft_linesegment[coord_index]
     b = ft_linesegment[coord_index + 1]
-
+    prec = get_coord_precision(input_crs)
     if not densify_in_projection:
-        p = interpolate_geodetic(a, b, max_segment_length, input_crs)
+        p = round_line_segment(
+            interpolate_geodesic(a, b, max_segment_length, input_crs), prec
+        )
     else:
-        p = interpolate_src_proj(a, b, max_segment_length)
+        p = round_line_segment(interpolate_src_proj(a, b, max_segment_length), prec)
 
     result = ft_linesegment
+
+    result[coord_index] = tuple(round(x, prec) for x in result[coord_index])
+    result[coord_index + 1] = tuple(round(x, prec) for x in result[coord_index + 1])
+
     result[coord_index + 1 : coord_index + 1] = p
     return len(p)
+
+
+def round_line_segment(l_segment, precision):
+    return list([tuple(round(y, precision) for y in x) for x in l_segment])
 
 
 def add_vertices_exceeding_max_segment_length(
@@ -299,12 +312,18 @@ def check_density(input_file, max_segment_length, layer):
     return report
 
 
-def get_hr_report(report: list[tuple[list[int], float]], max_segment_length):
+def get_cmd_result_message(
+    input_file: str, report: list[tuple[list[int], float]], max_segment_length
+) -> str:
+    status = "PASSED" if len(report) == 0 else "FAILED"
+    status_message = f"density-check {status} for file {input_file} with max-segment-length: {max_segment_length}"
+
     if len(report) == 0:
-        return ""
+        return status_message
 
     hr_report = (
-        f"feature(s) detected which contain line-segments(s) "
+        f"{status_message}\n\n"
+        f"Feature(s) detected which contain line-segments(s) "
         f"exceed max-segment-length ({max_segment_length}):\n"
     )
     for i, item in enumerate(report):
@@ -367,6 +386,13 @@ def crs_is_geographic(crs_string: str) -> bool:
 
     crs = CRS.from_authority(*crs_string.split(":"))
     return crs.is_geographic
+
+
+def get_coord_precision(crs_string: str):
+    coord_precision = DEFAULT_PRECISION_PROJECTED
+    if crs_is_geographic(crs_string):
+        coord_precision = DEFAULT_PRECISION_GEOGRAPHIC
+    return coord_precision
 
 
 def transform_point(source_crs: str, target_crs: str, val: tuple[float, float]):

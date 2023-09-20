@@ -1,25 +1,32 @@
 import json
 
-from geodense.lib import check_density_geometry_coordinates, get_hr_report
+from geodense.lib import check_density_geometry_coordinates, get_cmd_result_message
+
+# TODO: add test to test content of error message
 
 
 def test_get_empty_hr_report(linestring_feature_multiple_linesegments):
     feature = json.loads(linestring_feature_multiple_linesegments)
     result = []
+    max_segment_length = 20000
     check_density_geometry_coordinates(
-        feature["geometry"]["coordinates"], "EPSG:28992", 20000, result
+        feature["geometry"]["coordinates"], "EPSG:28992", max_segment_length, result
     )
-    report = get_hr_report(result, 20000)
-    assert report == ""  # TODO: generate succes message when ok
+    cmd_output = get_cmd_result_message("my-file", result, max_segment_length)
+    assert (
+        cmd_output
+        == f"density-check PASSED for file my-file with max-segment-length: {max_segment_length}"
+    )
 
 
 def test_get_hr_report(linestring_feature_multiple_linesegments):
     feature = json.loads(linestring_feature_multiple_linesegments)
     result = []
+    max_segment_length = 10
     check_density_geometry_coordinates(
-        feature["geometry"]["coordinates"], "EPSG:28992", 10, result
+        feature["geometry"]["coordinates"], "EPSG:28992", max_segment_length, result
     )
-    report = get_hr_report(result, 10)
-    assert (
-        len(report.split("\n")) == len(result) + 1
-    )  # check that report contains same nr of lines as result +1
+    cmd_output = get_cmd_result_message("my-file", result, max_segment_length)
+    assert cmd_output.startswith(
+        f"density-check FAILED for file my-file with max-segment-length: {max_segment_length}"
+    )

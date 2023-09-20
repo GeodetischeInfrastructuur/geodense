@@ -2,9 +2,17 @@
 
 [![Endpoint Badge](https://img.shields.io/endpoint?url=https%3A%2F%2Fgeodetischeinfrastructuur.github.io%2Fgeodense%2Fbadge.json&style=flat-square&logo=pytest&logoColor=white)](https://geodetischeinfrastructuur.github.io/geodense/)
 
-Python library and CLI tool to **check density** and **densify** linestring and polygon geometries using the geodetic great circle calculation.
+Python library and CLI tool to **check density** and **densify** linestring and polygon geometries using the geodesic great-circle calculation.
 
 Implementation based on [*Eenduidige transformatie van grenzen tussen ETRS89 en RD*](https://geoforum.nl/uploads/default/original/2X/c/c0795baa683bf3845c866ae4c576a880455be02a.pdf)
+
+## Installation
+
+To install from source check out this repository and run from the root:
+
+```sh
+pip install .
+```
 
 ## Development
 
@@ -27,12 +35,14 @@ coverage run --source=src/geodense -m pytest -v tests && coverage report -m
 
 Use either `geodense` or the short `gden` alias:
 
-```sh
+
+```txt
 $ geodense --help
 
-usage: geodense [-h] {densify,check-density} ...
+Usage: geodense [-h] {densify,check-density} ...
 
-Check density of, and densify geometries using the geodetic great circle calculation for accurate CRS transformations
+Check density of, and densify geometries using the geodesic (great-circle)
+calculation for accurate CRS transformations
 
 Commands:
   {densify,check-density}

@@ -1,6 +1,6 @@
 [project]
 name = "geodense"
-description = "Check density of, and densify geospatial geometries using the geodetic great circle calculation for accurate CRS transformations"
+description = "Check density of, and densify geospatial geometries using the geodesic great-circle calculation for accurate CRS transformations"
 keywords = []
 license = { text = "MIT" }
 classifiers = [
