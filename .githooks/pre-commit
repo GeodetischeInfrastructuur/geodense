@@ -53,12 +53,12 @@ FILES=$(git diff --cached --name-only --diff-filter=ACMR | sed 's| |\\ |g' | { g
 
 [ -z "$FILES" ] && print_message "no python files in commit to format and lint" -1 "INFO" true && exit 0
 
-command_available "black"
-print_message "pre-commit - black autoformatting" 1 "INFO" true
-echo "$FILES" | xargs black --stdin-filename {}
-
 command_available "ruff"
 print_message "pre-commit - running ruff  linting" 1 "INFO" true
 echo "$FILES" | xargs ruff --fix
+
+command_available "black"
+print_message "pre-commit - black autoformatting" 1 "INFO" true
+echo "$FILES" | xargs black --stdin-filename {}
 
 echo "$FILES" | xargs git add

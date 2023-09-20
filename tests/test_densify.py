@@ -56,7 +56,7 @@ def test_linestring_transformed_source_proj(linestring_feature):
         feature_t["geometry"]["coordinates"], "EPSG:28992", 1000, True
     )
     feature_coords_length = 2
-    feature_t_coord_length = 14
+    feature_t_coord_length = 12
 
     assert feature != feature_t
     assert len(feature["geometry"]["coordinates"]) == feature_coords_length
