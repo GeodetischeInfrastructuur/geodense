@@ -1,8 +1,10 @@
 from geodense.lib import (
     DEFAULT_PRECISION_GEOGRAPHIC,
     DEFAULT_PRECISION_PROJECTED,
+    TRANSFORM_CRS,
     add_vertices_exceeding_max_segment_length,
     add_vertices_to_line_segment,
+    get_transformer,
     interpolate_src_proj,
 )
 
@@ -10,9 +12,7 @@ from geodense.lib import (
 def test_interpolate_src_proj_no_op():
     points = [(0, 0), (10, 10)]  # 14.142
     points_t = interpolate_src_proj(*points, 20)
-    assert (
-        points_t == points
-    ), f"expected points_t and points to be equal, instead they differ: points - {points}, points_t - {points_t}"
+    assert points_t == [], f"expected points_t to be empty, received: {points_t}"
 
 
 def test_interpolate_src_proj():
@@ -28,7 +28,10 @@ def test_interpolate_src_proj():
 def test_add_vertices_exceeding_max_segment_length():
     linestring = [(0, 0), (10, 10), (20, 20)]
     linestring_t = linestring
-    add_vertices_exceeding_max_segment_length(linestring_t, 10, "EPSG:28992", True)
+
+    transformer = get_transformer("EPSG:28992", TRANSFORM_CRS)
+
+    add_vertices_exceeding_max_segment_length(linestring_t, 10, transformer, True)
     assert len(linestring_t) == 5  # noqa: PLR2004
     assert linestring_t == [(0, 0), (5.0, 5.0), (10, 10), (15.0, 15.0), (20, 20)]
 
@@ -36,7 +39,8 @@ def test_add_vertices_exceeding_max_segment_length():
 def test_interpolate_round_projected():
     """Note precision is only reduced by round()"""
     points_proj = [(0.12345678, 0.12345678), (10.12345678, 10.12345678)]
-    add_vertices_to_line_segment(points_proj, 0, "EPSG:28992", 10, True)
+    transformer = get_transformer("EPSG:28992", TRANSFORM_CRS)
+    add_vertices_to_line_segment(points_proj, 0, transformer, 10, True)
 
     assert all(
         [
@@ -53,7 +57,8 @@ def test_interpolate_round_geographic():
         (0.1234567891011, 0.1234567891011),
         (10.1234567891011, 10.1234567891011),
     ]
-    add_vertices_to_line_segment(points_geog, 0, "EPSG:4258", 10, True)
+    transformer = get_transformer("EPSG:4258", TRANSFORM_CRS)
+    add_vertices_to_line_segment(points_geog, 0, transformer, 10, True)
 
     assert all(
         [

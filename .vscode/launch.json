@@ -58,6 +58,19 @@
             "justMyCode": false
         },
         {
+            "name": "Python: densify linestring 3d",
+            "type": "python",
+            "request": "launch",
+            "module": "geodense.main",
+            "args": [
+                "densify",
+                "${workspaceFolder}/tests/data/linestrings_3d.json",
+                "${workspaceFolder}/out-data/test-3d.json",
+                "--max-segment-length", "5000"
+            ],
+            "justMyCode": false
+        },
+        {
             "name": "Python: check density polygons",
             "type": "python",
             "request": "launch",

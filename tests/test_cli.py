@@ -2,8 +2,9 @@ import os
 import tempfile
 from unittest.mock import patch
 
+import pytest
 from cli_test_helpers import ArgvContext
-from geodense.main import main
+from geodense.main import densify_cmd, main
 
 
 @patch("geodense.main.densify_cmd")
@@ -56,3 +57,17 @@ def test_cli_check_density_cmd(mock_command, test_dir):
     )  # note max_segment_length arg is parsed as int by argparse
 
     assert mock_command.called
+
+
+def test_cli_densify_raises_exception(test_dir):
+    with pytest.raises(
+        ValueError,
+        match=r"Unsupported GeometryType .+, supported GeometryTypes are: .+",
+    ):
+        densify_cmd(
+            os.path.join(test_dir, "data", "linestrings_3d.json"),
+            os.path.join(test_dir, "data-out", "linestrings_3d.json"),
+            1000,
+            "",
+            False,
+        )
