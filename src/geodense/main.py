@@ -37,7 +37,7 @@ using the geodetic great circle calculation for accurate CRS transformations",
     )
 
     subparsers = parser.add_subparsers()
-    
+
     densify_parser = subparsers.add_parser(
         "densify",
         formatter_class=parser.formatter_class,
@@ -90,7 +90,7 @@ using the geodetic great circle calculation for accurate CRS transformations",
         default="",
     )
     check_density_parser.set_defaults(func=check_density_cmd)
-    
+
     parser._positionals.title = "commands"
     args = parser.parse_args()
 
