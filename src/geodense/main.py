@@ -104,8 +104,6 @@ using the geodesic (great-circle) calculation for accurate CRS transformations",
     parser._positionals.title = "commands"
     args = parser.parse_args()
 
-    #     import fiona
-    # >>> fiona.supported_drivers
     try:
         func = args.func
         del args.func
@@ -116,4 +114,4 @@ using the geodesic (great-circle) calculation for accurate CRS transformations",
 
 
 if __name__ == "__main__":
-    main()
+    main()  # pragma: no cover
