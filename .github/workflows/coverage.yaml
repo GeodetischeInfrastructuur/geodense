@@ -8,16 +8,27 @@ on:
 jobs:
   generate_coverage:
     name: Generate Coverage Report
-    
+
     permissions:
       contents: write
       pages: write
       id-token: write
-      
+
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Cache Conda
+        uses: actions/cache@v1
+        with:
+          path: /usr/share/miniconda
+          key: ${{ runner.os }}-conda-${{ hashFiles('environment.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-conda-
+
       - name: Setup conda
         uses: s-weigand/setup-conda@v1
         with:

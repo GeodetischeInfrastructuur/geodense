@@ -5,39 +5,64 @@ on:
 
 jobs:
   linting_and_tests:
-    name: Linting and Tests | python=${{ matrix.python-version }}
+    name: Linting and Tests | python=3.9
+    env:
+      PROJ_DATA: /usr/share/miniconda/share/proj
+      PROJ_NETWORK: ON
+    defaults:
+      run:
+        shell: bash -l {0}
 
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        python-version: ["3.9"]
-
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup conda
-        uses: s-weigand/setup-conda@v1
-        with:
-          update-conda: true
-          python-version: ${{ matrix.python-version }}
-          conda-channels: anaconda, conda-forge
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Conda install dependencies
-        run: conda install fiona==1.9.4
+      - name: Setup Mamba
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          python-version: 3.9
+          channels: conda-forge
+          channel-priority: flexible
+          auto-activate-base: true
+          activate-environment: myenv
+
+
+      - name: Set environment variables used in cache
+        run: |
+          echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
+
+      - name: Cache Mamba
+        id: cache
+        uses: actions/cache@v3
+        env:
+          CACHE_NUMBER: 0 # Increment this number if you wish to hard-refresh the cache.
+        with:
+          path: /usr/share/miniconda/envs/myenv
+          key: conda-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
+
+      - name: Install development dependencies (if invalid cache)
+        run: conda install -n myenv fiona==1.9.4
+        if: steps.cache.outputs.cache-hit != 'true'
 
       - name: Install dependencies
         run: |
-          python${{ matrix.python-version }} -m pip install --upgrade pip
-          python${{ matrix.python-version }} -m pip install --force-reinstall -e ".[dev]"
+          conda activate myenv
+          python3 -m pip install --upgrade pip
+          python3 -m pip install --force-reinstall -e ".[dev]"
 
       - name: Lint with black
         run: |
-          python${{ matrix.python-version }} -m black --check .
+          conda activate myenv
+          python3 -m black --check .
 
       - name: Lint with ruff
         run: |
-          python${{ matrix.python-version }} -m ruff -v .
+          conda activate myenv
+          python3 -m ruff -v .
 
       - name: Test with pytest and generate coverage report
         run: |
-          python${{ matrix.python-version }} -m coverage run --source=src/geodense -m pytest -v tests
+          conda activate myenv
+          python3 -m coverage run --source=src/geodense -m pytest -v tests
