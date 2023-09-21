@@ -1,7 +1,5 @@
-import json
 import math
 import os
-import re
 from collections.abc import Sequence
 from typing import Union
 
@@ -308,7 +306,9 @@ def check_density_geometry_coordinates(
         ]
 
 
-def check_density(input_file, max_segment_length, layer):
+def check_density(
+    input_file, max_segment_length, layer
+) -> list[tuple[list[int], float]]:
     layer = get_valid_layer_name(input_file, layer)
 
     with fiona.open(input_file, layer=layer) as src:
@@ -394,9 +394,6 @@ def geom_type_check(geom_type):
 
 
 def crs_is_geographic(crs_string: str) -> bool:
-    if re.match(r"\{'init'\:\s'.*'\}", crs_string):
-        crs_string = json.loads(crs_string.replace("'", '"'))["init"].upper()
-
     crs = CRS.from_authority(*crs_string.split(":"))
     return crs.is_geographic
 
