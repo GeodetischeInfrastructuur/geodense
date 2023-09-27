@@ -25,6 +25,12 @@ pip install -e .
 pip uninstall geodense
 ```
 
+Install dev dependencies with:
+
+```sh
+pip install ".[dev]"
+```
+
 Check test coverage (install `coverage` with `pip install coverage` ):
 
 ```sh
@@ -34,7 +40,6 @@ coverage run --source=src/geodense -m pytest -v tests && coverage report -m
 ## Usage CLI
 
 Use either `geodense` or the short `gden` alias:
-
 
 ```txt
 $ geodense --help
