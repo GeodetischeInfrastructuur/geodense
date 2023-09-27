@@ -4,9 +4,11 @@ from typing import Any, Literal, Union
 import pytest
 from _pytest.python_api import RaisesContext
 from geodense.lib import (
+    SUPPORTED_FILE_FORMATS,
     crs_is_geographic,
     file_is_supported_fileformat,
     geom_type_check,
+    get_driver_by_file_extension,
 )
 
 
@@ -68,3 +70,18 @@ def test_crs_is_geographic(crs_string: str, expectation: bool):
 )
 def test_is_supported_fileformat(file_path, expectation):
     assert file_is_supported_fileformat(file_path) is expectation
+
+
+def test_get_driver_by_file_extension_raises():
+    with pytest.raises(
+        ValueError,
+        match=r"file extension '.foobar' not found in list of supported extensions: .shp, .fgb, .geojson, .json, .gml, .gpkg",
+    ):
+        get_driver_by_file_extension(".foobar")
+
+
+@pytest.mark.parametrize("supported_file_format", SUPPORTED_FILE_FORMATS)
+def test_get_driver_by_file_extension_all_values(supported_file_format):
+    extensions = SUPPORTED_FILE_FORMATS[supported_file_format]
+    for ext in extensions:
+        assert get_driver_by_file_extension(ext) in SUPPORTED_FILE_FORMATS

@@ -103,7 +103,38 @@ def densify_geometry_coordinates(
     )
 
 
-ERROR_MESSAGE_UNSUPPORTED_FILE_FORMAT = "Argument {arg_name} {file_path} is of an unspported fileformat, see list-formats for list of supported file formats"
+ERROR_MESSAGE_UNSUPPORTED_FILE_FORMAT = "Argument {arg_name} {file_path} is of an unsupported fileformat, see list-formats for list of supported file formats"
+
+
+def validate_densify_geospatial_file_files(input_file, output_file):
+    _, input_file_ext = os.path.splitext(input_file)
+    _, output_file_ext = os.path.splitext(output_file)
+
+    if input_file == output_file:
+        raise ValueError(
+            f"input_file and output_file arguments must be different, input_file: {input_file}, output_file: {output_file}"
+        )
+
+    if input_file_ext != output_file_ext:
+        raise ValueError(
+            f"Extension of input_file and output_file need to match, was input_file: {input_file_ext}, output_file: {output_file_ext}"
+        )
+
+    if not file_is_supported_fileformat(input_file):
+        raise ValueError(
+            ERROR_MESSAGE_UNSUPPORTED_FILE_FORMAT.format(
+                file_path=input_file, arg_name="input_file"
+            )
+        )
+    # no need for check if output_file file format is supported, since check for equality of file format of input_file and output_file is done before file_is_supported_fileformat(input_file) check
+
+    if not os.path.exists(input_file):
+        raise ValueError(f"input_file {input_file} does not exist")
+
+    if not os.path.exists(os.path.realpath(os.path.dirname(output_file))):
+        raise ValueError(
+            f"target directory of output_file {output_file} does not exist"
+        )
 
 
 def densify_geospatial_file(
@@ -113,23 +144,12 @@ def densify_geospatial_file(
     max_segment_length: Union[int, None] = None,
     densify_in_projection: bool = False,
 ):
-    if not file_is_supported_fileformat(input_file):
-        raise ValueError(
-            ERROR_MESSAGE_UNSUPPORTED_FILE_FORMAT.format(
-                file_path=input_file, arg_name="input_file"
-            )
-        )
-    if not file_is_supported_fileformat(output_file):
-        raise ValueError(
-            ERROR_MESSAGE_UNSUPPORTED_FILE_FORMAT.format(
-                file_path=output_file, arg_name="output_file"
-            )
-        )
+    validate_densify_geospatial_file_files(input_file, output_file)
+
+    _, output_file_ext = os.path.splitext(output_file)
 
     max_segment_length = abs(max_segment_length or DEFAULT_MAX_SEGMENT_LENGTH)
-
     layer = get_valid_layer_name(input_file, layer)
-    _, output_file_ext = os.path.splitext(output_file)
     single_layer_file_ext = [".json", ".geojson"]
 
     with fiona.open(input_file, layer=layer) as src:
@@ -451,5 +471,14 @@ def get_supported_extensions() -> list[str]:
 
 def file_is_supported_fileformat(filepath: str) -> bool:
     ext = pathlib.Path(filepath).suffix
-    # flatten list of lists
+    # flatten list of get_driver_by_file_extensionlists
     return ext in get_supported_extensions()
+
+
+def get_driver_by_file_extension(extension: str) -> str:
+    for key, value in SUPPORTED_FILE_FORMATS.items():
+        if extension in value:
+            return key
+    raise ValueError(
+        f"file extension '{extension}' not found in list of supported extensions: {', '.join(get_supported_extensions())}"
+    )

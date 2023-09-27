@@ -14,8 +14,6 @@ from geodense.lib import (
     get_transformer,
 )
 
-# TODO: add 3D feature to test
-
 
 def test_point_raises_exception(point_feature):
     feature = json.loads(point_feature)
@@ -189,21 +187,21 @@ def test_densify_geospatial_file(test_dir):
     [
         (
             "linestrings.foobar",
-            "linestrings.json",
+            "linestrings_out.foobar",
             pytest.raises(
                 ValueError,
-                match=r"Argument input_file .*linestrings.foobar is of an unspported fileformat, see list-formats for list of supported file formats",
+                match=r"Argument input_file .*linestrings.foobar is of an unsupported fileformat, see list-formats for list of supported file formats",
             ),
         ),
         (
             "linestrings.json",
-            "linestrings.foobar",
+            "linestrings.gpkg",
             pytest.raises(
                 ValueError,
-                match=r"Argument output_file .*linestrings.foobar is of an unspported fileformat, see list-formats for list of supported file formats",
+                match=r"Extension of input_file and output_file need to match, was input_file: .json, output_file: .gpkg",
             ),
         ),
-        ("linestrings.json", "linestrings.geojson", does_not_raise()),
+        ("linestrings.json", "linestrings.json", does_not_raise()),
     ],
 )
 def test_densify_geospatial_file_unsupported_file_format(
@@ -215,20 +213,20 @@ def test_densify_geospatial_file_unsupported_file_format(
         assert densify_geospatial_file(input_file, output_file) is None
 
 
-def test_densify_geospatial_file_negative(test_dir):
+def test_densify_geospatial_file_negative(tmpdir, test_dir):
     in_file = "linestrings.json"
-    out_file = os.path.join(tempfile.mkdtemp(), in_file)
+    out_file = os.path.join(tmpdir, in_file)
     densify_geospatial_file(
         os.path.join(test_dir, "data", in_file), out_file, "", -10000
     )
     assert os.path.exists(out_file)
 
 
-def test_densify_geospatial_file_exception(test_dir):
+def test_densify_geospatial_file_exception(tmpdir, test_dir):
     with mock.patch.object(pyproj.Geod, "fwd_intermediate") as get_mock:
         get_mock.side_effect = ValueError("FOOBAR")
         in_file = "linestrings.json"
-        out_file = os.path.join(tempfile.mkdtemp(), in_file)
+        out_file = os.path.join(tmpdir, in_file)
         with pytest.raises(
             ValueError,
             match=r"Unexpected error occured while processing feature \[0\]",
@@ -238,9 +236,9 @@ def test_densify_geospatial_file_exception(test_dir):
             )
 
 
-def test_densify_geospatial_file_in_proj_exc(test_dir):
+def test_densify_geospatial_file_in_proj_exc(tmpdir, test_dir):
     in_file = "linestrings-4258.json"
-    out_file = os.path.join(tempfile.mkdtemp(), in_file)
+    out_file = os.path.join(tmpdir, in_file)
 
     with pytest.raises(
         ValueError,
@@ -252,3 +250,38 @@ def test_densify_geospatial_file_in_proj_exc(test_dir):
         densify_geospatial_file(
             os.path.join(test_dir, "data", in_file), out_file, "", None, True
         )
+
+
+def test_densify_geospatial_file_input_file_does_not_exist(tmpdir, test_dir):
+    input_file = os.path.join(test_dir, "foobar.json")
+    output_file = os.path.join(tmpdir, "foobar.json")
+
+    with pytest.raises(
+        ValueError,
+        match=(r"input_file .*foobar.json does not exist"),
+    ):
+        assert isinstance(densify_geospatial_file(input_file, output_file))
+
+
+def test_densify_geospatial_file_output_dir_does_not_exist_raises(test_dir):
+    input_file = os.path.join(test_dir, "data", "linestrings.json")
+    output_file = os.path.join(test_dir, "foobar", "foobar.json")
+
+    with pytest.raises(
+        ValueError,
+        match=(r"target directory of output_file .*foobar.json does not exist"),
+    ):
+        assert isinstance(densify_geospatial_file(input_file, output_file))
+
+
+def test_densify_geospatial_file_input_and_output_equal_raises(test_dir):
+    input_file = os.path.join(test_dir, "data", "linestrings.json")
+    output_file = os.path.join(test_dir, "data", "linestrings.json")
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"input_file and output_file arguments must be different, input_file: .*linestrings.json, output_file: .*linestrings.json"
+        ),
+    ):
+        assert isinstance(densify_geospatial_file(input_file, output_file))

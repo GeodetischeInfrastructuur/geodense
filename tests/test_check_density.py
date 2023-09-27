@@ -56,7 +56,7 @@ def test_check_density_polygon_with_hole_not_pass(polygon_feature_with_holes):
             "linestrings.foobar",
             pytest.raises(
                 ValueError,
-                match=r"Argument input_file .*linestrings.foobar is of an unspported fileformat, see list-formats for list of supported file formats",
+                match=r"Argument input_file .*linestrings.foobar is of an unsupported fileformat, see list-formats for list of supported file formats",
             ),
         ),
         ("linestrings.json", does_not_raise()),
