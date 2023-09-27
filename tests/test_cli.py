@@ -1,7 +1,6 @@
 import os
 import re
 import sys
-import tempfile
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -26,19 +25,26 @@ def test_cli_list_formats_cmd_shows_list(capsys):
 
 
 @patch("geodense.main.SUPPORTED_FILE_FORMATS", {"FOOBAR": ".foo"})
-def test_cli_list_formats_raises_exception():
-    with pytest.raises(
-        KeyError,
-        match=r"The following format\(s\) are not supported by your fiona installation: FOOBAR",
-    ):
+def test_cli_list_formats_shows_error_message(capsys):
+    with pytest.raises(SystemExit) as cm:
         list_formats_cmd()
+    assert cm.type == SystemExit
+    expected_exit_code = 1
+    _, err = capsys.readouterr()
+    assert (
+        cm.value.code == expected_exit_code
+    ), f"expected list_formats_cmd call to exit with exit code {expected_exit_code} was {cm.value.code}"
+    assert re.match(
+        r"ERROR: The following format\(s\) are not supported by your fiona installation: FOOBAR",
+        err,
+    )
 
 
 @patch("geodense.main.densify_cmd")
-def test_cli_densify_cmd(mock_command, test_dir):
+def test_cli_densify_cmd(mock_command, tmpdir, test_dir):
     in_file = "linestrings.json"
     in_filepath = f"{test_dir}/data/{in_file}"
-    out_filepath = os.path.join(tempfile.mkdtemp(), in_file)
+    out_filepath = os.path.join(tmpdir, in_file)
 
     max_segment_length = "5000"
     with ArgvContext(
@@ -109,18 +115,25 @@ def test_cli_check_density_cmd(mock_command, test_dir):
     assert mock_command.called
 
 
-def test_cli_densify_raises_exception(test_dir):
-    with pytest.raises(
-        ValueError,
-        match=r"Unsupported GeometryType .+, supported GeometryTypes are: .+",
-    ):
+def test_cli_densify_raises_exception(capsys, tmpdir, test_dir):
+    with pytest.raises(SystemExit) as cm:
         densify_cmd(
             os.path.join(test_dir, "data", "linestrings_3d.json"),
-            os.path.join(test_dir, "data-out", "linestrings_3d.json"),
+            os.path.join(tmpdir, "linestrings_3d.json"),
             1000,
             "",
             False,
         )
+    assert cm.type == SystemExit
+    expected_exit_code = 1
+    _, err = capsys.readouterr()
+    assert (
+        cm.value.code == expected_exit_code
+    ), f"expected list_formats_cmd call to exit with exit code {expected_exit_code} was {cm.value.code}"
+    assert re.match(
+        r"ERROR: Unsupported GeometryType 3D LineString, supported GeometryTypes are: LineString, Polygon, MultiPolygon, MultiLineString\n",
+        err,
+    )
 
 
 USAGE_STRING = "Usage: geodense [-h] {list-formats,densify,check-density} ..."

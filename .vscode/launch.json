@@ -18,6 +18,18 @@
             "justMyCode": false
         },
         {
+            "name": "Python: densify linestrings - SHP ",
+            "type": "python",
+            "request": "launch",
+            "module": "geodense.main",
+            "args": [
+                "densify",
+                "${workspaceFolder}/tests/data/linestrings.json",
+                "${workspaceFolder}/out-data/linestrings-out.shp"
+            ],
+            "justMyCode": false
+        },
+        {
             "name": "Python: densify linestrings (GPKG)",
             "type": "python",
             "request": "launch",
