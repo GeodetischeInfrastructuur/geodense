@@ -1,6 +1,8 @@
 import json
 import os
+from contextlib import nullcontext as does_not_raise
 
+import pytest
 from geodense.lib import (
     TRANSFORM_CRS,
     check_density,
@@ -45,3 +47,24 @@ def test_check_density_polygon_with_hole_not_pass(polygon_feature_with_holes):
         feature["geometry"]["coordinates"], transformer, 5000, result
     )
     assert len(result) > 0
+
+
+@pytest.mark.parametrize(
+    ("input_file", "expectation"),
+    [
+        (
+            "linestrings.foobar",
+            pytest.raises(
+                ValueError,
+                match=r"Argument input_file .*linestrings.foobar is of an unspported fileformat, see list-formats for list of supported file formats",
+            ),
+        ),
+        ("linestrings.json", does_not_raise()),
+    ],
+)
+def test_density_check_geospatial_file_unsupported_file_format(
+    test_dir, input_file, expectation
+):
+    input_file = os.path.join(test_dir, "data", input_file)
+    with expectation:
+        assert isinstance(check_density(input_file, 1000, "lijnen"), list)

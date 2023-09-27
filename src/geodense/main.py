@@ -1,14 +1,41 @@
 import argparse
 import sys
 
+from fiona import supported_drivers
 from rich_argparse import RichHelpFormatter
 
 from geodense.lib import (
     DEFAULT_MAX_SEGMENT_LENGTH,
+    SUPPORTED_FILE_FORMATS,
     check_density,
     densify_geospatial_file,
     get_cmd_result_message,
 )
+
+
+def list_formats_cmd():
+    # check if SUPPORTED_FILE_FORMATS are in fiona.supported_drivers
+    unsupported_formats = []
+    for key in SUPPORTED_FILE_FORMATS:
+        if key not in supported_drivers:
+            unsupported_formats.append(key)
+    if len(unsupported_formats) > 0:
+        raise KeyError(
+            f"The following format(s) are not supported by your fiona installation: {', '.join(unsupported_formats)}"
+        )
+
+    column_name_length = 15  # max_length + 2 padding
+    column_ext_length = 15  # max_length + 2 padding
+
+    print(f"{'Name' : <{column_name_length}} | {'Extension' : <{column_ext_length}}")
+    print(
+        f"{'-'*(column_ext_length + column_name_length + 3)}"
+    )  # +3 to account for " | " seperator
+    for format in SUPPORTED_FILE_FORMATS:
+        print(
+            f"{format : <{column_name_length}} | {' ,'.join(SUPPORTED_FILE_FORMATS[format]) : <{column_ext_length}}"
+        )
+    sys.exit(0)
 
 
 def densify_cmd(
@@ -46,12 +73,19 @@ using the geodesic (great-circle) calculation for accurate CRS transformations",
 
     subparsers = parser.add_subparsers()
 
+    list_formats_parser = subparsers.add_parser(
+        "list-formats",
+        formatter_class=parser.formatter_class,
+        description="List supported file formats for reading and writing. File formats are determined based on the extension of the input_file and output_file.",
+    )
+    list_formats_parser.set_defaults(func=list_formats_cmd)
+
     densify_parser = subparsers.add_parser(
         "densify",
         formatter_class=parser.formatter_class,
-        description="Densify (multi)polygon and linestring geometries along the great-circle using the GRS 1980 ellipsoid",
+        description="Densify (multi)polygon and linestring geometries along the great-circle using the GRS 1980 ellipsoid. See the list-formats command for a list of supported file formats.",
     )
-    densify_parser.add_argument("input_file", type=str, help="foobar")
+    densify_parser.add_argument("input_file", type=str)
     densify_parser.add_argument("output_file", type=str)
     densify_parser.add_argument(
         "--max-segment-length",
@@ -82,7 +116,7 @@ using the geodesic (great-circle) calculation for accurate CRS transformations",
         formatter_class=parser.formatter_class,
         description="Check density of (multi)polygon and linestring geometries. \
         When result of check is OK the program will return with exit code 0, when result \
-        is FAILED the program will return with exit code 1.",
+        is FAILED the program will return with exit code 1. See the list-formats command for a list of supported file formats.",
     )
     check_density_parser.add_argument("input_file", type=str)
     check_density_parser.add_argument(
