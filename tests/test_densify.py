@@ -1,6 +1,7 @@
 import json
 import os
 import tempfile
+from contextlib import nullcontext as does_not_raise
 from unittest import mock
 
 import pyproj
@@ -180,6 +181,38 @@ def test_densify_geospatial_file(test_dir):
     out_file = os.path.join(tempfile.mkdtemp(), in_file)
     densify_geospatial_file(os.path.join(test_dir, "data", in_file), out_file)
     assert os.path.exists(out_file)
+
+
+# TODO: test conversion from geojson to geopackage...
+@pytest.mark.parametrize(
+    ("input_file", "output_file", "expectation"),
+    [
+        (
+            "linestrings.foobar",
+            "linestrings.json",
+            pytest.raises(
+                ValueError,
+                match=r"Argument input_file .*linestrings.foobar is of an unspported fileformat, see list-formats for list of supported file formats",
+            ),
+        ),
+        (
+            "linestrings.json",
+            "linestrings.foobar",
+            pytest.raises(
+                ValueError,
+                match=r"Argument output_file .*linestrings.foobar is of an unspported fileformat, see list-formats for list of supported file formats",
+            ),
+        ),
+        ("linestrings.json", "linestrings.geojson", does_not_raise()),
+    ],
+)
+def test_densify_geospatial_file_unsupported_file_format(
+    test_dir, input_file, output_file, expectation
+):
+    input_file = os.path.join(test_dir, "data", input_file)
+    output_file = os.path.join(tempfile.mkdtemp(), output_file)
+    with expectation:
+        assert densify_geospatial_file(input_file, output_file) is None
 
 
 def test_densify_geospatial_file_negative(test_dir):

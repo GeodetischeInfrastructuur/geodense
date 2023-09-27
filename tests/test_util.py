@@ -3,7 +3,11 @@ from typing import Any, Literal, Union
 
 import pytest
 from _pytest.python_api import RaisesContext
-from geodense.lib import crs_is_geographic, geom_type_check
+from geodense.lib import (
+    crs_is_geographic,
+    file_is_supported_fileformat,
+    geom_type_check,
+)
 
 
 @pytest.mark.parametrize(
@@ -44,11 +48,23 @@ def test_geom_type_check(
         assert geom_type_check(geom_type) is None
 
 
-def test_crs_is_geographic():
-    data = [
-        ("EPSG:28992", False),
-        ("EPSG:4258", True),
-    ]
-    for test in data:
-        result = crs_is_geographic(test[0])
-        assert result == test[1]
+@pytest.mark.parametrize(
+    ("crs_string", "expectation"), [("EPSG:28992", False), ("EPSG:4258", True)]
+)
+def test_crs_is_geographic(crs_string: str, expectation: bool):
+    assert crs_is_geographic(crs_string) is expectation
+
+
+@pytest.mark.parametrize(
+    ("file_path", "expectation"),
+    [
+        ("/temp/data/bar.fgb", True),
+        (
+            "/temp/data/foo.gpkg",
+            True,
+        ),
+        ("/temp/data/foo.fgdb", False),
+    ],
+)
+def test_is_supported_fileformat(file_path, expectation):
+    assert file_is_supported_fileformat(file_path) is expectation

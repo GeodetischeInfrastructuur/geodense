@@ -1,5 +1,7 @@
+import itertools
 import math
 import os
+import pathlib
 from collections.abc import Sequence
 from typing import Union
 
@@ -18,6 +20,14 @@ SUPPORTED_GEOM_TYPES = [
 DEFAULT_MAX_SEGMENT_LENGTH = 200
 DEFAULT_PRECISION_GEOGRAPHIC = 9
 DEFAULT_PRECISION_PROJECTED = 4
+
+SUPPORTED_FILE_FORMATS = {
+    "ESRI Shapefile": [".shp"],
+    "FlatGeobuf": [".fgb"],
+    "GeoJSON": [".geojson", ".json"],
+    "GML": [".gml"],
+    "GPKG": [".gpkg"],
+}
 
 
 def transfrom_linestrings_in_geometry_coordinates(
@@ -93,6 +103,9 @@ def densify_geometry_coordinates(
     )
 
 
+ERROR_MESSAGE_UNSUPPORTED_FILE_FORMAT = "Argument {arg_name} {file_path} is of an unspported fileformat, see list-formats for list of supported file formats"
+
+
 def densify_geospatial_file(
     input_file,
     output_file,
@@ -100,6 +113,19 @@ def densify_geospatial_file(
     max_segment_length: Union[int, None] = None,
     densify_in_projection: bool = False,
 ):
+    if not file_is_supported_fileformat(input_file):
+        raise ValueError(
+            ERROR_MESSAGE_UNSUPPORTED_FILE_FORMAT.format(
+                file_path=input_file, arg_name="input_file"
+            )
+        )
+    if not file_is_supported_fileformat(output_file):
+        raise ValueError(
+            ERROR_MESSAGE_UNSUPPORTED_FILE_FORMAT.format(
+                file_path=output_file, arg_name="output_file"
+            )
+        )
+
     max_segment_length = abs(max_segment_length or DEFAULT_MAX_SEGMENT_LENGTH)
 
     layer = get_valid_layer_name(input_file, layer)
@@ -309,6 +335,13 @@ def check_density_geometry_coordinates(
 def check_density(
     input_file, max_segment_length, layer
 ) -> list[tuple[list[int], float]]:
+    if not file_is_supported_fileformat(input_file):
+        raise ValueError(
+            ERROR_MESSAGE_UNSUPPORTED_FILE_FORMAT.format(
+                file_path=input_file, arg_name="input_file"
+            )
+        )
+
     layer = get_valid_layer_name(input_file, layer)
 
     with fiona.open(input_file, layer=layer) as src:
@@ -410,3 +443,13 @@ def get_transformer(source_crs: str, target_crs: str):
     source_crs_crs = CRS.from_authority(*source_crs.split(":"))
     target_crs_crs = CRS.from_authority(*target_crs.split(":"))
     return Transformer.from_crs(source_crs_crs, target_crs_crs, always_xy=True)
+
+
+def get_supported_extensions() -> list[str]:
+    return list(itertools.chain.from_iterable(SUPPORTED_FILE_FORMATS.values()))
+
+
+def file_is_supported_fileformat(filepath: str) -> bool:
+    ext = pathlib.Path(filepath).suffix
+    # flatten list of lists
+    return ext in get_supported_extensions()
