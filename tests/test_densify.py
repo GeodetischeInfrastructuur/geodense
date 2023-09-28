@@ -285,3 +285,14 @@ def test_densify_geospatial_file_input_and_output_equal_raises(test_dir):
         ),
     ):
         assert isinstance(densify_geospatial_file(input_file, output_file))
+
+
+def test_densify_geospatial_file_output_file_exists_raises(test_dir):
+    input_file = os.path.join(test_dir, "data", "linestrings.json")
+    output_file = os.path.join(test_dir, "data", "linestrings-4258.json")
+
+    with pytest.raises(
+        ValueError,
+        match=(r"output_file .*linestrings-4258.json already exists"),
+    ):
+        assert isinstance(densify_geospatial_file(input_file, output_file))

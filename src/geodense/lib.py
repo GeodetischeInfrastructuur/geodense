@@ -20,7 +20,7 @@ SUPPORTED_GEOM_TYPES = [
 DEFAULT_MAX_SEGMENT_LENGTH = 200
 DEFAULT_PRECISION_GEOGRAPHIC = 9
 DEFAULT_PRECISION_PROJECTED = 4
-
+DEFAULT_PRECISION_DISTANCE = 4
 SUPPORTED_FILE_FORMATS = {
     "ESRI Shapefile": [".shp"],
     "FlatGeobuf": [".fgb"],
@@ -136,6 +136,9 @@ def validate_densify_geospatial_file_files(input_file, output_file):
             f"target directory of output_file {output_file} does not exist"
         )
 
+    if os.path.exists(output_file):
+        raise ValueError(f"output_file {output_file} already exists")
+
 
 def densify_geospatial_file(
     input_file,
@@ -165,10 +168,20 @@ projected coordinates reference systems, crs {crs} is a geographic crs"
 
         geom_type_check(geom_type)
 
+        prec = (
+            DEFAULT_PRECISION_GEOGRAPHIC
+            if crs_is_geographic(crs)
+            else DEFAULT_PRECISION_PROJECTED
+        )
+
+        # COORDINATE_PRECISION is only a lco (layer creation option) for OGR GeoJSON driver
+        is_geojson_driver = profile["driver"] == "GeoJSON"
+        fun_kwargs = {"COORDINATE_PRECISION": prec} if is_geojson_driver else {}
+
         with fiona.open(
-            output_file, "w", **profile, layer=layer
+            output_file, "w", **profile, layer=layer, **fun_kwargs
         ) if output_file_ext not in single_layer_file_ext else fiona.open(
-            output_file, "w", **profile
+            output_file, "w", **profile, **fun_kwargs
         ) as dst:
             transformer = get_transformer(crs, TRANSFORM_CRS)
             for i, ft in enumerate(src):
@@ -389,12 +402,12 @@ def get_cmd_result_message(
 
     hr_report = (
         f"{status_message}\n\n"
-        f"Feature(s) detected which contain line-segments(s) "
-        f"exceed max-segment-length ({max_segment_length}):\n"
+        f"Feature(s) detected that contain line-segment(s) "
+        f"exceeding max-segment-length ({max_segment_length}):\n"
     )
     for i, item in enumerate(report):
         ft_index, coordinates_indices = item[0][:1], item[0][1:]
-        distance = item[1]
+        distance = round(item[1], DEFAULT_PRECISION_DISTANCE)
         ft_report = f"  - features{ft_index}.geometry.segments\
  [{', '.join([str(x) for x  in coordinates_indices])}], distance: {distance}"
         if len(report) - 1 != i:
