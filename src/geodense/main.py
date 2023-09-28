@@ -76,7 +76,6 @@ def check_density_cmd(input_file: str, max_segment_length: float, layer: str):
         else:
             print(cmd_output)
             sys.exit(1)
-
     except ValueError as e:
         print(CLI_ERROR_MESSAGE_TEMPLATE.format(message=str(e)), file=sys.stderr)
         sys.exit(1)
@@ -103,7 +102,7 @@ using the geodesic (great-circle) calculation for accurate CRS transformations",
     densify_parser = subparsers.add_parser(
         "densify",
         formatter_class=parser.formatter_class,
-        description="Densify (multi)polygon and (multi)linestring geometries along the great-circle using the GRS 1980 ellipsoid. See the list-formats command for a list of supported file formats. File format of input_file and output_file should match.",
+        description="Densify (multi)polygon and (multi)linestring geometries along the great-circle using the GRS 1980 ellipsoid (with ETRS89 - EPSG:4258). See the list-formats command for a list of supported file formats. File format of input_file and output_file should match.",
     )
     densify_parser.add_argument("input_file", type=str)
     densify_parser.add_argument("output_file", type=str)
@@ -127,7 +126,7 @@ using the geodesic (great-circle) calculation for accurate CRS transformations",
         "-p",
         action="store_true",
         default=False,
-        help="densify using source projection, not applicable when source crs is geographic",
+        help="densify using source projection (great-circle distance is not used), not applicable when source crs is geographic",
     )
 
     densify_parser.set_defaults(func=densify_cmd)
@@ -135,7 +134,7 @@ using the geodesic (great-circle) calculation for accurate CRS transformations",
     check_density_parser = subparsers.add_parser(
         "check-density",
         formatter_class=parser.formatter_class,
-        description="Check density of (multi)polygon and (multi)linestring geometries. \
+        description="Check density of (multi)polygon and (multi)linestring geometries based on great-circle distance using the GRS 1980 ellipsoid (with ETRS89 - EPSG:4258). \
         When result of check is OK the program will return with exit code 0, when result \
         is FAILED the program will return with exit code 1. See the list-formats command for a list of supported file formats.",
     )

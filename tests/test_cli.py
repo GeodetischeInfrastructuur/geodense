@@ -1,22 +1,28 @@
 import os
 import re
 import sys
+from unittest import mock
 from unittest.mock import MagicMock, patch
 
+import geodense
 import pytest
 from cli_test_helpers import ArgvContext
+from geodense.lib import DEFAULT_MAX_SEGMENT_LENGTH
 from geodense.main import check_density_cmd, densify_cmd, list_formats_cmd, main
+
+USAGE_STRING = "Usage: geodense [-h] {list-formats,densify,check-density} ..."
 
 
 @patch("geodense.main.list_formats_cmd")
 def test_cli_list_formats_cmd(mock_command):
+    """Tests if main.list_formats_cmd is called when invoking `geodense list-formats`"""
     with ArgvContext("geodense", "list-formats"):
         main()
-
     assert mock_command.called
 
 
 def test_cli_list_formats_cmd_shows_list(capsys):
+    """Tests if `geodense list-formats` is outputting tabular list of supported file formats and their extensions"""
     with ArgvContext("geodense", "list-formats"), pytest.raises(SystemExit):
         main()
     out, _ = capsys.readouterr()
@@ -26,6 +32,7 @@ def test_cli_list_formats_cmd_shows_list(capsys):
 
 @patch("geodense.main.SUPPORTED_FILE_FORMATS", {"FOOBAR": ".foo"})
 def test_cli_list_formats_shows_error_message(capsys):
+    """Tests if `geodense list-formats` shows an error message in case supported file formats of fiona do not match with geodense"""
     with pytest.raises(SystemExit) as cm:
         list_formats_cmd()
     assert cm.type == SystemExit
@@ -81,7 +88,7 @@ def test_check_density_cmd_exit_0(test_dir):
 
 
 @patch("geodense.main.check_density", MagicMock(return_value=[([0, 1], 100.1239123)]))
-def test_check_density_cmd_exit_1(test_dir):
+def test_check_density_cmd_exit_1_when_result_not_ok(test_dir):
     input_file = os.path.join(test_dir, "data", "polygons.json")
     with pytest.raises(SystemExit) as cm:
         check_density_cmd(input_file, 20000, "")
@@ -115,7 +122,7 @@ def test_cli_check_density_cmd(mock_command, test_dir):
     assert mock_command.called
 
 
-def test_cli_densify_raises_exception(capsys, tmpdir, test_dir):
+def test_cli_densify_shows_outputs_error_returns_1(capsys, tmpdir, test_dir):
     with pytest.raises(SystemExit) as cm:
         densify_cmd(
             os.path.join(test_dir, "data", "linestrings_3d.json"),
@@ -136,7 +143,26 @@ def test_cli_densify_raises_exception(capsys, tmpdir, test_dir):
     )
 
 
-USAGE_STRING = "Usage: geodense [-h] {list-formats,densify,check-density} ..."
+def test_cli_check_density_shows_outputs_error_returns_1(capsys, test_dir):
+    with mock.patch.object(geodense.main, "check_density") as get_mock:
+        get_mock.side_effect = ValueError("FOOBAR")
+
+        with pytest.raises(SystemExit) as cm:
+            check_density_cmd(
+                os.path.join(test_dir, "data", "linestrings.json"),
+                DEFAULT_MAX_SEGMENT_LENGTH,
+                "",
+            )
+        assert cm.type == SystemExit
+        expected_exit_code = 1
+        _, err = capsys.readouterr()
+        assert (
+            cm.value.code == expected_exit_code
+        ), f"expected check_density_cmd call to exit with exit code {expected_exit_code} was {cm.value.code}"
+        assert re.match(
+            r"ERROR: FOOBAR\n",
+            err,
+        )
 
 
 def test_cli_shows_help_text_invoked_no_args(capsys):
