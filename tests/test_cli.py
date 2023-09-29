@@ -125,22 +125,24 @@ def test_cli_check_density_cmd(mock_command, test_dir):
 
 
 def test_cli_densify_shows_outputs_error_returns_1(capsys, tmpdir, test_dir):
-    with pytest.raises(SystemExit) as cm:
-        densify_cmd(
-            os.path.join(test_dir, "data", "linestrings_3d.json"),
-            os.path.join(tmpdir, "linestrings_3d.json"),
-            1000,
+    with mock.patch.object(geodense.main, "densify_geospatial_file") as get_mock:
+        get_mock.side_effect = ValueError("FOOBAR")
+
+        with pytest.raises(SystemExit) as cm:
+            densify_cmd(
+                os.path.join(test_dir, "data", "linestrings.json"),
+                os.path.join(tmpdir, "linestrings.json"),
+            )
+        assert cm.type == SystemExit
+        expected_exit_code = 1
+        _, err = capsys.readouterr()
+        assert (
+            cm.value.code == expected_exit_code
+        ), f"expected densify_cmd call to exit with exit code {expected_exit_code} was {cm.value.code}"
+        assert re.match(
+            r"ERROR: FOOBAR\n",
+            err,
         )
-    assert cm.type == SystemExit
-    expected_exit_code = 1
-    _, err = capsys.readouterr()
-    assert (
-        cm.value.code == expected_exit_code
-    ), f"expected list_formats_cmd call to exit with exit code {expected_exit_code} was {cm.value.code}"
-    assert re.match(
-        r"ERROR: Unsupported GeometryType 3D LineString, supported GeometryTypes are: LineString, Polygon, MultiPolygon, MultiLineString\n",
-        err,
-    )
 
 
 def test_cli_check_density_shows_outputs_error_returns_1(capsys, test_dir):

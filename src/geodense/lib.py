@@ -17,6 +17,12 @@ SUPPORTED_GEOM_TYPES = [
     "MultiPolygon",
     "MultiLineString",
 ]
+
+SUPPORTED_GEOM_TYPES = [
+    *SUPPORTED_GEOM_TYPES,
+    *[f"3D {x}" for x in SUPPORTED_GEOM_TYPES],
+]
+
 DEFAULT_MAX_SEGMENT_LENGTH = 200
 DEFAULT_PRECISION_GEOGRAPHIC = 9
 DEFAULT_PRECISION_PROJECTED = 4
@@ -29,7 +35,7 @@ SUPPORTED_FILE_FORMATS = {
     "GPKG": [".gpkg"],
 }
 ERROR_MESSAGE_UNSUPPORTED_FILE_FORMAT = "Argument {arg_name} {file_path} is of an unsupported fileformat, see list-formats for list of supported file formats"
-
+THREE_DIMENSIONAL = 3
 point_type = tuple[float, ...]
 report_type = list[tuple[list[int], float]]
 
@@ -71,10 +77,18 @@ def check_density_linestring(
     for k in range(0, len(linestring) - 1):
         a: point_type = linestring[k]
         b: point_type = linestring[k + 1]
-        a_t = transformer.transform(*a)  # type: ignore
-        b_t = transformer.transform(*b)  # type: ignore
+
+        a_2d = tuple(a[:2])
+        b_2d = tuple(b[:2])
+
+        a_t = transformer.transform(*a_2d)  # type: ignore
+        b_t = transformer.transform(*b_2d)  # type: ignore
         g = Geod(ellps=ELLIPS)
         _, _, geod_dist = g.inv(*a_t, *b_t, return_back_azimuth=True)  # type: ignore
+        if math.isnan(geod_dist):
+            raise ValueError(
+                f"unable to calculate geodesic distance, result: {geod_dist}, expected: floating-point number"
+            )
         if geod_dist > (max_segment_length + 0.001):
             report_indices = [*indices, k]
             result.append((report_indices, geod_dist))
@@ -225,11 +239,14 @@ projected coordinates reference systems, crs {crs} is a geographic crs"
                         max_segment_length,
                         densify_in_projection,
                     )
-                    geom = fiona.Geometry(coordinates=coordinates_t, type=geom_type)
-                    dst.write(fiona.Feature(geometry=geom, properties=ft.properties))
+                    geom = fiona.Geometry(
+                        coordinates=coordinates_t, type=geom_type.replace("3D ", "")
+                    )
+                    new_ft = fiona.Feature(geometry=geom, properties=ft.properties)
+                    dst.write(new_ft)
                 except Exception as e:
                     raise ValueError(
-                        f"Unexpected error occured while processing feature [{i}]"
+                        f"Unexpected error occured while processing feature [{i}]: {e}"
                     ) from e
 
 
@@ -263,8 +280,15 @@ def interpolate_geodesic(
     a: point_type, b: point_type, max_segment_length: float, transformer: Transformer
 ) -> list[point_type]:
     """geodesic interpolate intermediate points between points a and b, with segment_length < max_segment_length. Only returns intermediate points."""
-    a_t = transformer.transform(*a)  # type: ignore
-    b_t = transformer.transform(*b)  # type: ignore
+
+    three_dimensional_points = (
+        len(a) == THREE_DIMENSIONAL and len(b) == THREE_DIMENSIONAL
+    )
+    a_2d = tuple(a[:2])
+    b_2d = tuple(b[:2])
+
+    a_t = transformer.transform(*a_2d)  # type: ignore
+    b_t = transformer.transform(*b_2d)  # type: ignore
     g = Geod(ellps=ELLIPS)
     az12, _, dist = g.inv(*a_t, *b_t, return_back_azimuth=True)  # type: ignore
     if dist <= max_segment_length:
@@ -285,9 +309,26 @@ def interpolate_geodesic(
         back_transformer = Transformer.from_crs(
             transformer.target_crs, transformer.source_crs, always_xy=True
         )
-        return [
-            back_transformer.transform(lon, lat) for lon, lat in zip(r.lons, r.lats)
-        ]
+
+        if three_dimensional_points:
+            # interpolate height for three_dimensional_points
+            height_a = a[2:][0]
+            height_b = b[2:][0]
+            delta_height_b_a = height_b - height_a
+            delta_height_per_point = delta_height_b_a * (new_max_segment_length / dist)
+            return [
+                tuple(
+                    (
+                        *back_transformer.transform(lon, lat),
+                        (height_a + ((i + 1) * delta_height_per_point)),
+                    )
+                )
+                for i, (lon, lat) in enumerate(zip(r.lons, r.lats))
+            ]
+        else:
+            return [
+                back_transformer.transform(lon, lat) for lon, lat in zip(r.lons, r.lats)
+            ]
 
 
 def _is_linestring_geom(geometry_coordinates: list[Any]) -> bool:
@@ -296,22 +337,19 @@ def _is_linestring_geom(geometry_coordinates: list[Any]) -> bool:
         - Fiona linestring coordinates are of type: list[tuple[float,float,...]])
         - GeoJSON linestring coordinates are of type: list[list[float]]
 
-        Raises exception if 3D geometry is encountered.
-
     Args:
         geometry_coordinates (list): Fiona or GeoJSON coordinates sequence
 
     Returns:
-        bool: if geometry_coordinates is linestring geometry return True else False
+        bool: if geometry_coordinates is linestring return True else False
     """
     if (
         len(geometry_coordinates) > 0
         and isinstance(geometry_coordinates[0], Sequence)
-        and all(isinstance(x, float) for x in geometry_coordinates[0])
+        and all(
+            isinstance(x, (float, int)) for x in geometry_coordinates[0]
+        )  # also test for int just in case...
     ):
-        three_dimensional = 3
-        if len(geometry_coordinates[0]) == three_dimensional:
-            raise ValueError("3 dimensional geometries are not supported")
         return True
     return False
 
@@ -475,7 +513,7 @@ def _get_valid_layer_name(input_file: str, layer_name: Optional[str] = None) -> 
         return layer_name
     else:
         raise ValueError(
-            f"layer_name {layer_name} not found in file {input_file}, layers: {', '.join(layers)}"
+            f"layer_name '{layer_name}' not found in file {input_file}, layers: {', '.join(layers)}"
         )
 
 

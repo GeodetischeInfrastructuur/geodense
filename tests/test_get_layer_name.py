@@ -12,7 +12,7 @@ def test_get_layer_name(test_dir):
 def test_get_layer_name_not_existing(test_dir):
     with pytest.raises(
         ValueError,
-        match=r"layer_name foobar not found in file .+, layers: .+",
+        match=r"layer_name 'foobar' not found in file .+, layers: .+",
     ):
         _ = _get_valid_layer_name(
             os.path.join(test_dir, "data/polygons.json"), "foobar"
