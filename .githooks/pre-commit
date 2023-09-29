@@ -22,7 +22,7 @@ print_message() {
         ;;
     esac
     if [[ $prepend_newline == true ]]; then printf '%b\n'; fi
-    printf "${color}%s %s\n\033[0;37m" "$(printf "${padding_char}%.0s" $(seq 1 "$indent_level"))" "$message"
+    printf "${color}%s %s\n\033[0;37m" "$(printf "${padding_char}%.0s" $(seq 1 "$indent_level"))" "pre-commit hook: ${message}"
     printf '%b\n' # trailing newline
 }
 
@@ -43,22 +43,22 @@ fi
 
 # TODO: enably mypy after adding type annotations
 # command_available "mypy"
-# print_message "pre-commit - running mypy static type checking" 1 "" true
-# if ! mypy src;then
-#     print_message "mypy static type check failed - commit aborted" 1 "ERROR" true
-#     exit 1
-# fi
+print_message "running mypy static type checking" 1 "" true
+if ! mypy src;then
+    print_message "mypy static type check failed - commit aborted" 1 "ERROR" true
+    exit 1
+fi
 
 FILES=$(git diff --cached --name-only --diff-filter=ACMR | sed 's| |\\ |g' | { grep -E "\.py$" || test $? = 1; })
 
-[ -z "$FILES" ] && print_message "no python files in commit to format and lint" -1 "INFO" true && exit 0
+[ -z "$FILES" ] && print_message "no python files in commit to format and lint" -1 "" true && exit 0
 
 command_available "ruff"
-print_message "pre-commit - running ruff  linting" 1 "INFO" true
+print_message "running ruff  linting" 1 "INFO" true
 echo "$FILES" | xargs ruff --fix
 
 command_available "black"
-print_message "pre-commit - black autoformatting" 1 "INFO" true
+print_message "black autoformatting" 1 "INFO" true
 echo "$FILES" | xargs black --stdin-filename {}
 
 echo "$FILES" | xargs git add

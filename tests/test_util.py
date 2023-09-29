@@ -4,11 +4,9 @@ from typing import Any, Literal, Union
 import pytest
 from _pytest.python_api import RaisesContext
 from geodense.lib import (
-    SUPPORTED_FILE_FORMATS,
-    crs_is_geographic,
-    file_is_supported_fileformat,
-    geom_type_check,
-    get_driver_by_file_extension,
+    _crs_is_geographic,
+    _file_is_supported_fileformat,
+    _geom_type_check,
 )
 
 
@@ -47,14 +45,14 @@ def test_geom_type_check(
     expectation: Union[Any, RaisesContext[ValueError]],
 ):
     with expectation:
-        assert geom_type_check(geom_type) is None
+        assert _geom_type_check(geom_type) is None
 
 
 @pytest.mark.parametrize(
     ("crs_string", "expectation"), [("EPSG:28992", False), ("EPSG:4258", True)]
 )
 def test_crs_is_geographic(crs_string: str, expectation: bool):
-    assert crs_is_geographic(crs_string) is expectation
+    assert _crs_is_geographic(crs_string) is expectation
 
 
 @pytest.mark.parametrize(
@@ -69,19 +67,4 @@ def test_crs_is_geographic(crs_string: str, expectation: bool):
     ],
 )
 def test_is_supported_fileformat(file_path, expectation):
-    assert file_is_supported_fileformat(file_path) is expectation
-
-
-def test_get_driver_by_file_extension_raises():
-    with pytest.raises(
-        ValueError,
-        match=r"file extension '.foobar' not found in list of supported extensions: .shp, .fgb, .geojson, .json, .gml, .gpkg",
-    ):
-        get_driver_by_file_extension(".foobar")
-
-
-@pytest.mark.parametrize("supported_file_format", SUPPORTED_FILE_FORMATS)
-def test_get_driver_by_file_extension_all_values(supported_file_format):
-    extensions = SUPPORTED_FILE_FORMATS[supported_file_format]
-    for ext in extensions:
-        assert get_driver_by_file_extension(ext) in SUPPORTED_FILE_FORMATS
+    assert _file_is_supported_fileformat(file_path) is expectation
