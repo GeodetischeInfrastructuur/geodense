@@ -103,7 +103,7 @@ using the geodesic (great-circle) calculation for accurate CRS transformations",
     densify_parser = subparsers.add_parser(
         "densify",
         formatter_class=parser.formatter_class,
-        description="Densify (multi)polygon and (multi)linestring geometries along the great-circle using the GRS 1980 ellipsoid (with ETRS89 - EPSG:4258). See the list-formats command for a list of supported file formats. File format of input_file and output_file should match.",
+        description="Densify (multi)polygon and (multi)linestring geometries along the great-circle using the GRS 1980 ellipsoid (with ETRS89 - EPSG:4258). See the list-formats command for a list of supported file formats. File format of input_file and output_file should match. When supplying 3D coordinates height is linear interpolated, for both geographic CRSs with ellipsoidal height and compound CRSs with physical height.",
     )
     densify_parser.add_argument("input_file", type=str)
     densify_parser.add_argument("output_file", type=str)
