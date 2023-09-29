@@ -2,9 +2,9 @@ from geodense.lib import (
     DEFAULT_PRECISION_GEOGRAPHIC,
     DEFAULT_PRECISION_PROJECTED,
     TRANSFORM_CRS,
-    add_vertices_exceeding_max_segment_length,
-    add_vertices_to_line_segment,
-    get_transformer,
+    _add_vertices_exceeding_max_segment_length,
+    _add_vertices_to_line_segment,
+    _get_transformer,
     interpolate_src_proj,
 )
 
@@ -29,9 +29,9 @@ def test_add_vertices_exceeding_max_segment_length():
     linestring = [(0, 0), (10, 10), (20, 20)]
     linestring_t = linestring
 
-    transformer = get_transformer("EPSG:28992", TRANSFORM_CRS)
+    transformer = _get_transformer("EPSG:28992", TRANSFORM_CRS)
 
-    add_vertices_exceeding_max_segment_length(linestring_t, 10, transformer, True)
+    _add_vertices_exceeding_max_segment_length(linestring_t, 10, transformer, True)
     assert len(linestring_t) == 5  # noqa: PLR2004
     assert linestring_t == [(0, 0), (5.0, 5.0), (10, 10), (15.0, 15.0), (20, 20)]
 
@@ -39,8 +39,8 @@ def test_add_vertices_exceeding_max_segment_length():
 def test_interpolate_round_projected():
     """Note precision is only reduced by round()"""
     points_proj = [(0.12345678, 0.12345678), (10.12345678, 10.12345678)]
-    transformer = get_transformer("EPSG:28992", TRANSFORM_CRS)
-    add_vertices_to_line_segment(points_proj, 0, transformer, 10, True)
+    transformer = _get_transformer("EPSG:28992", TRANSFORM_CRS)
+    _add_vertices_to_line_segment(points_proj, 0, transformer, 10, True)
 
     assert all(
         [
@@ -57,8 +57,8 @@ def test_interpolate_round_geographic():
         (0.1234567891011, 0.1234567891011),
         (10.1234567891011, 10.1234567891011),
     ]
-    transformer = get_transformer("EPSG:4258", TRANSFORM_CRS)
-    add_vertices_to_line_segment(points_geog, 0, transformer, 10, True)
+    transformer = _get_transformer("EPSG:4258", TRANSFORM_CRS)
+    _add_vertices_to_line_segment(points_geog, 0, transformer, 10, True)
 
     assert all(
         [

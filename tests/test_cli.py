@@ -75,7 +75,7 @@ def test_cli_densify_cmd(mock_command, tmpdir, test_dir):
     assert mock_command.called
 
 
-@patch("geodense.main.check_density", MagicMock(return_value=[]))
+@patch("geodense.main.check_density_file", MagicMock(return_value=[]))
 def test_check_density_cmd_exit_0(test_dir):
     input_file = os.path.join(test_dir, "data", "polygons.json")
     with pytest.raises(SystemExit) as cm:
@@ -87,7 +87,9 @@ def test_check_density_cmd_exit_0(test_dir):
     ), f"expected check_density_cmd call to exit with exit code {expected_exit_code} was {cm.value.code}"
 
 
-@patch("geodense.main.check_density", MagicMock(return_value=[([0, 1], 100.1239123)]))
+@patch(
+    "geodense.main.check_density_file", MagicMock(return_value=[([0, 1], 100.1239123)])
+)
 def test_check_density_cmd_exit_1_when_result_not_ok(test_dir):
     input_file = os.path.join(test_dir, "data", "polygons.json")
     with pytest.raises(SystemExit) as cm:
@@ -128,8 +130,6 @@ def test_cli_densify_shows_outputs_error_returns_1(capsys, tmpdir, test_dir):
             os.path.join(test_dir, "data", "linestrings_3d.json"),
             os.path.join(tmpdir, "linestrings_3d.json"),
             1000,
-            "",
-            False,
         )
     assert cm.type == SystemExit
     expected_exit_code = 1
@@ -144,7 +144,7 @@ def test_cli_densify_shows_outputs_error_returns_1(capsys, tmpdir, test_dir):
 
 
 def test_cli_check_density_shows_outputs_error_returns_1(capsys, test_dir):
-    with mock.patch.object(geodense.main, "check_density") as get_mock:
+    with mock.patch.object(geodense.main, "check_density_file") as get_mock:
         get_mock.side_effect = ValueError("FOOBAR")
 
         with pytest.raises(SystemExit) as cm:

@@ -1,5 +1,6 @@
 import argparse
 import sys
+from typing import Optional
 
 from fiona import supported_drivers
 from rich_argparse import RichHelpFormatter
@@ -7,7 +8,7 @@ from rich_argparse import RichHelpFormatter
 from geodense.lib import (
     DEFAULT_MAX_SEGMENT_LENGTH,
     SUPPORTED_FILE_FORMATS,
-    check_density,
+    check_density_file,
     densify_geospatial_file,
     get_cmd_result_message,
 )
@@ -15,7 +16,7 @@ from geodense.lib import (
 CLI_ERROR_MESSAGE_TEMPLATE = "ERROR: {message}"
 
 
-def list_formats_cmd():
+def list_formats_cmd() -> None:
     # check if SUPPORTED_FILE_FORMATS are in fiona.supported_drivers
     try:
         unsupported_formats = []
@@ -52,10 +53,10 @@ def list_formats_cmd():
 def densify_cmd(
     input_file: str,
     output_file: str,
-    max_segment_length: float,
-    layer: str,
-    in_projection: bool,
-):
+    max_segment_length: Optional[float] = None,
+    layer: Optional[str] = None,
+    in_projection: bool = False,
+) -> None:
     try:
         densify_geospatial_file(
             input_file, output_file, layer, max_segment_length, in_projection
@@ -65,9 +66,9 @@ def densify_cmd(
         sys.exit(1)
 
 
-def check_density_cmd(input_file: str, max_segment_length: float, layer: str):
+def check_density_cmd(input_file: str, max_segment_length: float, layer: str) -> None:
     try:
-        result = check_density(input_file, max_segment_length, layer)
+        result = check_density_file(input_file, max_segment_length, layer)
         cmd_output = get_cmd_result_message(input_file, result, max_segment_length)
 
         if len(result) == 0:
@@ -81,7 +82,7 @@ def check_density_cmd(input_file: str, max_segment_length: float, layer: str):
         sys.exit(1)
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         prog="geodense",
         description="Check density of, and densify geometries \

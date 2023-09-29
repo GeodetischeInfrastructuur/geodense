@@ -3,7 +3,7 @@ import math
 import os
 import pathlib
 from collections.abc import Sequence
-from typing import Union
+from typing import Any, Callable, Optional, Union
 
 import fiona
 from pyproj import CRS, Geod, Transformer
@@ -28,20 +28,26 @@ SUPPORTED_FILE_FORMATS = {
     "GML": [".gml"],
     "GPKG": [".gpkg"],
 }
+ERROR_MESSAGE_UNSUPPORTED_FILE_FORMAT = "Argument {arg_name} {file_path} is of an unsupported fileformat, see list-formats for list of supported file formats"
+
+point_type = tuple[float, ...]
+report_type = list[tuple[list[int], float]]
 
 
 def transfrom_linestrings_in_geometry_coordinates(
-    geometry_coordinates,
-    transformer,
-    transform_fun,
-    max_segment_length: Union[int, None] = None,
+    geometry_coordinates: list[Any],
+    transformer: Transformer,
+    transform_fun: Callable[
+        [list[point_type], float, Transformer, bool], list[point_type]
+    ],
+    max_segment_length: Optional[float] = None,
     densify_in_projection: bool = False,
-):
+) -> list[Any]:
     max_segment_length = abs(max_segment_length or DEFAULT_MAX_SEGMENT_LENGTH)
 
-    raise_e_if_point_geom(geometry_coordinates)
+    _raise_e_if_point_geom(geometry_coordinates)
 
-    if is_linestring_geom(geometry_coordinates):
+    if _is_linestring_geom(geometry_coordinates):
         geometry_coordinates = transform_fun(
             geometry_coordinates, max_segment_length, transformer, densify_in_projection
         )
@@ -55,282 +61,18 @@ def transfrom_linestrings_in_geometry_coordinates(
         ]
 
 
-def is_linestring_geom(geometry_coordinates: list) -> bool:
-    """Check if coordinates are of linestring geometry type.
-        - Fiona linestring coordinates are of type: list[tuple[float,float,...]])
-        - GeoJSON linestring coordinates are of type: list[list[float]]
-
-        Raises exception if 3D geometry is encountered.
-
-    Args:
-        geometry_coordinates (list): Fiona or GeoJSON coordinates sequence
-
-    Returns:
-        bool: if geometry_coordinates is linestring geometry return True else False
-    """
-    if (
-        len(geometry_coordinates) > 0
-        and isinstance(geometry_coordinates[0], Sequence)
-        and all(isinstance(x, float) for x in geometry_coordinates[0])
-    ):
-        three_dimensional = 3
-        if len(geometry_coordinates[0]) == three_dimensional:
-            raise ValueError("3 dimensional geometries are not supported")
-        return True
-
-
-def raise_e_if_point_geom(geometry_coordinates):
-    if all(isinstance(x, float) for x in geometry_coordinates):
-        raise ValueError(
-            "received point geometry coordinates, instead of (multi)linestring"
-        )
-
-
-def densify_geometry_coordinates(
-    coordinates,
-    transformer,
-    max_segment_length: Union[int, None] = None,
-    densify_in_projection: bool = False,
-):
-    max_segment_length = abs(max_segment_length or DEFAULT_MAX_SEGMENT_LENGTH)
-
-    return transfrom_linestrings_in_geometry_coordinates(
-        coordinates,
-        transformer,
-        add_vertices_exceeding_max_segment_length,
-        max_segment_length,
-        densify_in_projection,
-    )
-
-
-ERROR_MESSAGE_UNSUPPORTED_FILE_FORMAT = "Argument {arg_name} {file_path} is of an unsupported fileformat, see list-formats for list of supported file formats"
-
-
-def validate_densify_geospatial_file_files(input_file, output_file):
-    _, input_file_ext = os.path.splitext(input_file)
-    _, output_file_ext = os.path.splitext(output_file)
-
-    if input_file == output_file:
-        raise ValueError(
-            f"input_file and output_file arguments must be different, input_file: {input_file}, output_file: {output_file}"
-        )
-
-    if input_file_ext != output_file_ext:
-        raise ValueError(
-            f"Extension of input_file and output_file need to match, was input_file: {input_file_ext}, output_file: {output_file_ext}"
-        )
-
-    if not file_is_supported_fileformat(input_file):
-        raise ValueError(
-            ERROR_MESSAGE_UNSUPPORTED_FILE_FORMAT.format(
-                file_path=input_file, arg_name="input_file"
-            )
-        )
-    # no need for check if output_file file format is supported, since check for equality of file format of input_file and output_file is done before file_is_supported_fileformat(input_file) check
-
-    if not os.path.exists(input_file):
-        raise ValueError(f"input_file {input_file} does not exist")
-
-    if not os.path.exists(os.path.realpath(os.path.dirname(output_file))):
-        raise ValueError(
-            f"target directory of output_file {output_file} does not exist"
-        )
-
-    if os.path.exists(output_file):
-        raise ValueError(f"output_file {output_file} already exists")
-
-
-def densify_geospatial_file(
-    input_file,
-    output_file,
-    layer="",
-    max_segment_length: Union[int, None] = None,
-    densify_in_projection: bool = False,
-):
-    validate_densify_geospatial_file_files(input_file, output_file)
-
-    _, output_file_ext = os.path.splitext(output_file)
-
-    max_segment_length = abs(max_segment_length or DEFAULT_MAX_SEGMENT_LENGTH)
-    layer = get_valid_layer_name(input_file, layer)
-    single_layer_file_ext = [".json", ".geojson"]
-
-    with fiona.open(input_file, layer=layer) as src:
-        profile = src.profile
-        geom_type = profile["schema"]["geometry"]
-        crs = str(profile["crs"])
-
-        if densify_in_projection and crs_is_geographic(crs):
-            raise ValueError(
-                f"densify_in_projection can only be used with \
-projected coordinates reference systems, crs {crs} is a geographic crs"
-            )
-
-        geom_type_check(geom_type)
-
-        prec = (
-            DEFAULT_PRECISION_GEOGRAPHIC
-            if crs_is_geographic(crs)
-            else DEFAULT_PRECISION_PROJECTED
-        )
-
-        # COORDINATE_PRECISION is only a lco (layer creation option) for OGR GeoJSON driver
-        is_geojson_driver = profile["driver"] == "GeoJSON"
-        fun_kwargs = {"COORDINATE_PRECISION": prec} if is_geojson_driver else {}
-
-        with fiona.open(
-            output_file, "w", **profile, layer=layer, **fun_kwargs
-        ) if output_file_ext not in single_layer_file_ext else fiona.open(
-            output_file, "w", **profile, **fun_kwargs
-        ) as dst:
-            transformer = get_transformer(crs, TRANSFORM_CRS)
-            for i, ft in enumerate(src):
-                try:
-                    coordinates_t = densify_geometry_coordinates(
-                        ft.geometry.coordinates,
-                        transformer,
-                        max_segment_length,
-                        densify_in_projection,
-                    )
-                    geom = fiona.Geometry(coordinates=coordinates_t, type=geom_type)
-                    dst.write(fiona.Feature(geometry=geom, properties=ft.properties))
-                except Exception as e:
-                    raise ValueError(
-                        f"Unexpected error occured while processing feature [{i}]"
-                    ) from e
-
-
-def get_intermediate_nr_points_and_segment_length(
-    dist, max_segment_length
-) -> tuple[int, float]:
-    if dist <= max_segment_length:
-        raise ValueError(
-            f"max_segment_length ({max_segment_length}) cannot be bigger or equal than dist ({dist})"
-        )
-
-    remainder = dist % max_segment_length
-    nr_segments = int(dist // max_segment_length)
-    if remainder > 0:
-        nr_segments += 1
-    new_max_segment_length = dist / nr_segments  # space segments evenly over delta(a,b)
-    nr_points = (
-        nr_segments - 1
-    )  # convert nr of segments to nr of intermediate points, should be at least 1
-    return nr_points, new_max_segment_length
-
-
-def interpolate_src_proj(a, b, max_segment_length):
-    """Interpolate intermediate points between points a and b, with segment_length < max_segment_length. Only returns intermediate points."""
-    dist = math.sqrt((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2)  # Pythagoras
-    if dist <= max_segment_length:
-        return []
-    else:
-        new_points = []
-
-        (
-            nr_points,
-            new_max_segment_length,
-        ) = get_intermediate_nr_points_and_segment_length(dist, max_segment_length)
-
-        for i in range(0, nr_points):
-            p_point: Point = LineString([a, b]).interpolate(
-                new_max_segment_length * (i + 1)
-            )  # type: ignore
-            p = tuple(p_point.coords[0])
-            new_points.append(p)
-        return [
-            *new_points,
-        ]
-
-
-def interpolate_geodesic(a, b, max_segment_length, transformer: Transformer):
-    """geodesic interpolate intermediate points between points a and b, with segment_length < max_segment_length. Only returns intermediate points."""
-    a_t = transformer.transform(*a)
-    b_t = transformer.transform(*b)
-    g = Geod(ellps=ELLIPS)
-    az12, _, dist = g.inv(*a_t, *b_t, return_back_azimuth=True)  # type: ignore
-    if dist <= max_segment_length:
-        return []
-    else:
-        (
-            nr_points,
-            new_max_segment_length,
-        ) = get_intermediate_nr_points_and_segment_length(dist, max_segment_length)
-        r = g.fwd_intermediate(
-            *a_t,
-            az12,
-            npts=nr_points,
-            del_s=new_max_segment_length,
-            return_back_azimuth=True,
-        )  # type: ignore
-
-        back_transformer = Transformer.from_crs(
-            transformer.target_crs, transformer.source_crs, always_xy=True
-        )
-        return [
-            back_transformer.transform(lon, lat) for lon, lat in zip(r.lons, r.lats)
-        ]
-
-
-def add_vertices_to_line_segment(
-    ft_linesegment,
-    coord_index: int,
-    transformer: Transformer,
-    max_segment_length: float,
-    densify_in_projection: bool,
-):
-    a = ft_linesegment[coord_index]
-    b = ft_linesegment[coord_index + 1]
-    prec = get_coord_precision(transformer)
-    if not densify_in_projection:
-        p = round_line_segment(
-            interpolate_geodesic(a, b, max_segment_length, transformer), prec
-        )
-    else:
-        p = round_line_segment(interpolate_src_proj(a, b, max_segment_length), prec)
-
-    result = ft_linesegment
-
-    result[coord_index] = tuple([round(x, prec) for x in result[coord_index]])
-    result[coord_index + 1] = tuple([round(x, prec) for x in result[coord_index + 1]])
-
-    result[coord_index + 1 : coord_index + 1] = p
-
-    return len(p)
-
-
-def round_line_segment(l_segment, precision):
-    return list([tuple(round(y, precision) for y in x) for x in l_segment])
-
-
-def add_vertices_exceeding_max_segment_length(
-    linestring,
-    max_segment_length: float,
-    transformer: Transformer,
-    densify_in_projection: bool,
-):
-    added_nodes = 0
-    stop = len(linestring) - 1
-    for i, _ in enumerate(linestring[:stop]):
-        added_nodes += add_vertices_to_line_segment(
-            linestring,
-            i + added_nodes,
-            transformer,
-            max_segment_length,
-            densify_in_projection,
-        )
-    return linestring
-
-
 def check_density_linestring(
-    linestring_coordinates, transformer: Transformer, max_segment_length, indices
-):
+    linestring: list[point_type],
+    transformer: Transformer,
+    max_segment_length: float,
+    indices: list[int],
+) -> report_type:
     result = []
-    for k in range(0, len(linestring_coordinates) - 1):
-        a = linestring_coordinates[k]
-        b = linestring_coordinates[k + 1]
-        a_t = transformer.transform(*a)
-        b_t = transformer.transform(*b)
+    for k in range(0, len(linestring) - 1):
+        a: point_type = linestring[k]
+        b: point_type = linestring[k + 1]
+        a_t = transformer.transform(*a)  # type: ignore
+        b_t = transformer.transform(*b)  # type: ignore
         g = Geod(ellps=ELLIPS)
         _, _, geod_dist = g.inv(*a_t, *b_t, return_back_azimuth=True)  # type: ignore
         if geod_dist > (max_segment_length + 0.001):
@@ -340,16 +82,16 @@ def check_density_linestring(
 
 
 def check_density_geometry_coordinates(
-    geometry_coordinates,
+    geometry_coordinates: list[Any],
     transformer: Transformer,
     max_segment_length: float,
     result: list,
-    indices=None,
-):
+    indices: Optional[list[int]] = None,
+) -> None:
     if indices is None:
         indices = []
-    raise_e_if_point_geom(geometry_coordinates)
-    if is_linestring_geom(
+    _raise_e_if_point_geom(geometry_coordinates)
+    if _is_linestring_geom(
         geometry_coordinates
     ):  # check if at linestring level in coordinates array - list[typle[float,float]]
         linestring_report = check_density_linestring(
@@ -357,33 +99,31 @@ def check_density_geometry_coordinates(
         )
         result.extend(linestring_report)
     else:
-        [
+        for i, e in enumerate(geometry_coordinates):
             check_density_geometry_coordinates(
                 e, transformer, max_segment_length, result, [*indices, i]
             )
-            for i, e in enumerate(geometry_coordinates)
-        ]
 
 
-def check_density(
-    input_file, max_segment_length, layer
-) -> list[tuple[list[int], float]]:
-    if not file_is_supported_fileformat(input_file):
+def check_density_file(
+    input_file: str, max_segment_length: float, layer: str
+) -> report_type:
+    if not _file_is_supported_fileformat(input_file):
         raise ValueError(
             ERROR_MESSAGE_UNSUPPORTED_FILE_FORMAT.format(
                 file_path=input_file, arg_name="input_file"
             )
         )
 
-    layer = get_valid_layer_name(input_file, layer)
+    layer = _get_valid_layer_name(input_file, layer)
 
     with fiona.open(input_file, layer=layer) as src:
         profile = src.profile
         geom_type = profile["schema"]["geometry"]
         crs = str(profile["crs"])
-        geom_type_check(geom_type)
-        transformer = get_transformer(crs, TRANSFORM_CRS)
-        report = []
+        _geom_type_check(geom_type)
+        transformer = _get_transformer(crs, TRANSFORM_CRS)
+        report: list[tuple[list[int], float]] = []
         for i, ft in enumerate(src):
             check_density_geometry_coordinates(
                 ft.geometry.coordinates, transformer, max_segment_length, report, [i]
@@ -392,7 +132,7 @@ def check_density(
 
 
 def get_cmd_result_message(
-    input_file: str, report: list[tuple[list[int], float]], max_segment_length
+    input_file: str, report: report_type, max_segment_length: float
 ) -> str:
     status = "PASSED" if len(report) == 0 else "FAILED"
     status_message = f"density-check {status} for file {input_file} with max-segment-length: {max_segment_length}"
@@ -416,7 +156,293 @@ def get_cmd_result_message(
     return hr_report
 
 
-def get_valid_layer_name(input_file, layer_name=""):
+def densify_geometry_coordinates(
+    geometry_coordinates: list[Any],
+    transformer: Transformer,
+    max_segment_length: Union[float, None] = None,
+    densify_in_projection: bool = False,
+) -> list[Any]:
+    max_segment_length = abs(max_segment_length or DEFAULT_MAX_SEGMENT_LENGTH)
+
+    return transfrom_linestrings_in_geometry_coordinates(
+        geometry_coordinates,
+        transformer,
+        _add_vertices_exceeding_max_segment_length,
+        max_segment_length,
+        densify_in_projection,
+    )
+
+
+def densify_geospatial_file(
+    input_file_path: str,
+    output_file_path: str,
+    layer: Optional[str] = None,
+    max_segment_length: Optional[float] = None,
+    densify_in_projection: bool = False,
+) -> None:
+    _validate_densify_geospatial_file_file_args(input_file_path, output_file_path)
+
+    _, output_file_ext = os.path.splitext(output_file_path)
+
+    max_segment_length = abs(max_segment_length or DEFAULT_MAX_SEGMENT_LENGTH)
+    layer = _get_valid_layer_name(input_file_path, layer)
+    single_layer_file_ext = [".json", ".geojson"]
+
+    with fiona.open(input_file_path, layer=layer) as src:
+        profile = src.profile
+        geom_type = profile["schema"]["geometry"]
+        crs = str(profile["crs"])
+
+        if densify_in_projection and _crs_is_geographic(crs):
+            raise ValueError(
+                f"densify_in_projection can only be used with \
+projected coordinates reference systems, crs {crs} is a geographic crs"
+            )
+
+        _geom_type_check(geom_type)
+
+        prec = (
+            DEFAULT_PRECISION_GEOGRAPHIC
+            if _crs_is_geographic(crs)
+            else DEFAULT_PRECISION_PROJECTED
+        )
+
+        # COORDINATE_PRECISION is only a lco (layer creation option) for OGR GeoJSON driver
+        is_geojson_driver = profile["driver"] == "GeoJSON"
+        fun_kwargs = {"COORDINATE_PRECISION": prec} if is_geojson_driver else {}
+
+        with fiona.open(
+            output_file_path, "w", **profile, layer=layer, **fun_kwargs
+        ) if output_file_ext not in single_layer_file_ext else fiona.open(
+            output_file_path, "w", **profile, **fun_kwargs
+        ) as dst:
+            transformer = _get_transformer(crs, TRANSFORM_CRS)
+            for i, ft in enumerate(src):
+                try:
+                    coordinates_t = densify_geometry_coordinates(
+                        ft.geometry.coordinates,
+                        transformer,
+                        max_segment_length,
+                        densify_in_projection,
+                    )
+                    geom = fiona.Geometry(coordinates=coordinates_t, type=geom_type)
+                    dst.write(fiona.Feature(geometry=geom, properties=ft.properties))
+                except Exception as e:
+                    raise ValueError(
+                        f"Unexpected error occured while processing feature [{i}]"
+                    ) from e
+
+
+def interpolate_src_proj(
+    a: point_type, b: point_type, max_segment_length: float
+) -> list[point_type]:
+    """Interpolate intermediate points between points a and b, with segment_length < max_segment_length. Only returns intermediate points."""
+    dist = math.sqrt((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2)  # Pythagoras
+    if dist <= max_segment_length:
+        return []
+    else:
+        new_points = []
+
+        (
+            nr_points,
+            new_max_segment_length,
+        ) = _get_intermediate_nr_points_and_segment_length(dist, max_segment_length)
+
+        for i in range(0, nr_points):
+            p_point: Point = LineString([a, b]).interpolate(
+                new_max_segment_length * (i + 1)
+            )  # type: ignore
+            p = tuple(p_point.coords[0])
+            new_points.append(p)
+        return [
+            *new_points,
+        ]
+
+
+def interpolate_geodesic(
+    a: point_type, b: point_type, max_segment_length: float, transformer: Transformer
+) -> list[point_type]:
+    """geodesic interpolate intermediate points between points a and b, with segment_length < max_segment_length. Only returns intermediate points."""
+    a_t = transformer.transform(*a)  # type: ignore
+    b_t = transformer.transform(*b)  # type: ignore
+    g = Geod(ellps=ELLIPS)
+    az12, _, dist = g.inv(*a_t, *b_t, return_back_azimuth=True)  # type: ignore
+    if dist <= max_segment_length:
+        return []
+    else:
+        (
+            nr_points,
+            new_max_segment_length,
+        ) = _get_intermediate_nr_points_and_segment_length(dist, max_segment_length)
+        r = g.fwd_intermediate(
+            *a_t,
+            az12,
+            npts=nr_points,
+            del_s=new_max_segment_length,
+            return_back_azimuth=True,
+        )  # type: ignore
+
+        back_transformer = Transformer.from_crs(
+            transformer.target_crs, transformer.source_crs, always_xy=True
+        )
+        return [
+            back_transformer.transform(lon, lat) for lon, lat in zip(r.lons, r.lats)
+        ]
+
+
+def _is_linestring_geom(geometry_coordinates: list[Any]) -> bool:
+    """Check if coordinates are of linestring geometry type.
+
+        - Fiona linestring coordinates are of type: list[tuple[float,float,...]])
+        - GeoJSON linestring coordinates are of type: list[list[float]]
+
+        Raises exception if 3D geometry is encountered.
+
+    Args:
+        geometry_coordinates (list): Fiona or GeoJSON coordinates sequence
+
+    Returns:
+        bool: if geometry_coordinates is linestring geometry return True else False
+    """
+    if (
+        len(geometry_coordinates) > 0
+        and isinstance(geometry_coordinates[0], Sequence)
+        and all(isinstance(x, float) for x in geometry_coordinates[0])
+    ):
+        three_dimensional = 3
+        if len(geometry_coordinates[0]) == three_dimensional:
+            raise ValueError("3 dimensional geometries are not supported")
+        return True
+    return False
+
+
+def _raise_e_if_point_geom(geometry_coordinates: list[Any]) -> None:
+    if all(isinstance(x, float) for x in geometry_coordinates):
+        raise ValueError(
+            "received point geometry coordinates, instead of (multi)linestring"
+        )
+
+
+def _validate_densify_geospatial_file_file_args(
+    input_file_path: str, output_file_path: str
+) -> None:
+    _, input_file_ext = os.path.splitext(input_file_path)
+    _, output_file_ext = os.path.splitext(output_file_path)
+
+    if input_file_path == output_file_path:
+        raise ValueError(
+            f"input_file and output_file arguments must be different, input_file: {input_file_path}, output_file: {output_file_path}"
+        )
+
+    if input_file_ext != output_file_ext:
+        raise ValueError(
+            f"Extension of input_file and output_file need to match, was input_file: {input_file_ext}, output_file: {output_file_ext}"
+        )
+
+    if not _file_is_supported_fileformat(input_file_path):
+        raise ValueError(
+            ERROR_MESSAGE_UNSUPPORTED_FILE_FORMAT.format(
+                file_path=input_file_path, arg_name="input_file"
+            )
+        )
+    # no need for check if output_file file format is supported, since check for equality of file format of input_file and output_file is done before file_is_supported_fileformat(input_file) check
+
+    if not os.path.exists(input_file_path):
+        raise ValueError(f"input_file {input_file_path} does not exist")
+
+    if not os.path.exists(os.path.realpath(os.path.dirname(output_file_path))):
+        raise ValueError(
+            f"target directory of output_file {output_file_path} does not exist"
+        )
+
+    if os.path.exists(output_file_path):
+        raise ValueError(f"output_file {output_file_path} already exists")
+
+
+def _get_intermediate_nr_points_and_segment_length(
+    dist: float, max_segment_length: float
+) -> tuple[int, float]:
+    if dist <= max_segment_length:
+        raise ValueError(
+            f"max_segment_length ({max_segment_length}) cannot be bigger or equal than dist ({dist})"
+        )
+
+    remainder = dist % max_segment_length
+    nr_segments = int(dist // max_segment_length)
+    if remainder > 0:
+        nr_segments += 1
+    new_max_segment_length = dist / nr_segments  # space segments evenly over delta(a,b)
+    nr_points = (
+        nr_segments - 1
+    )  # convert nr of segments to nr of intermediate points, should be at least 1
+    return nr_points, new_max_segment_length
+
+
+def _add_vertices_to_line_segment(
+    linestring: list[point_type],
+    coord_index: int,
+    transformer: Transformer,
+    max_segment_length: float,
+    densify_in_projection: bool = False,
+) -> int:
+    """Adds vertices to line segment in place, and returns number of vertices added.
+
+    Args:
+        ft_linesegment (_type_): line segment to add vertices
+        coord_index (int): coordinate index of line segment to add vertices for
+        transformer (Transformer): pyproj transformer
+        max_segment_length (float): max segment length, if exceeded vertices will be added
+        densify_in_projection (bool): whether to use source projection to densify (not use great-circle distance)
+
+    Returns:
+        int: number of added vertices
+    """
+    a = linestring[coord_index]
+    b = linestring[coord_index + 1]
+    prec = _get_coord_precision(transformer)
+    if not densify_in_projection:
+        p = _round_line_segment(
+            interpolate_geodesic(a, b, max_segment_length, transformer), prec
+        )
+    else:
+        p = _round_line_segment(interpolate_src_proj(a, b, max_segment_length), prec)
+
+    result = linestring
+
+    result[coord_index] = tuple([round(x, prec) for x in result[coord_index]])
+    result[coord_index + 1] = tuple([round(x, prec) for x in result[coord_index + 1]])
+
+    result[coord_index + 1 : coord_index + 1] = p
+
+    return len(p)
+
+
+def _round_line_segment(
+    l_segment: list[point_type], precision: int
+) -> list[point_type]:
+    return list([tuple(round(y, precision) for y in x) for x in l_segment])
+
+
+def _add_vertices_exceeding_max_segment_length(
+    linestring: list[point_type],
+    max_segment_length: float,
+    transformer: Transformer,
+    densify_in_projection: bool,
+) -> list[point_type]:
+    added_nodes = 0
+    stop = len(linestring) - 1
+    for i, _ in enumerate(linestring[:stop]):
+        added_nodes += _add_vertices_to_line_segment(
+            linestring,
+            i + added_nodes,
+            transformer,
+            max_segment_length,
+            densify_in_projection,
+        )
+    return linestring
+
+
+def _get_valid_layer_name(input_file: str, layer_name: Optional[str] = None) -> str:  # type: ignore[return]
     """
     Check if layer_name exists in input_file, or when layer_name is empty get layer_name from only layer in input_file.
 
@@ -435,15 +461,16 @@ def get_valid_layer_name(input_file, layer_name=""):
     Returns:
         str: layer_name that is garantueed to exist in input_file
     """
-    layers = fiona.listlayers(input_file)
-    if layer_name == "":
+    layers: list[str] = fiona.listlayers(input_file)
+    if layer_name is None:
         if len(layers) == 1:
             return layers[0]
         elif len(layers) > 1:
             raise ValueError(
                 f"input_file {input_file} contains more than 1 layer: \
 {layers}, specify which layer to use with optional layer argument"
-            )  # case len(layers) == 0 not possible, results in fiona.DriverError
+            )
+        # else: # case len(layers) == 0 not possible, results in fiona.DriverError - so not testable - see # type: ignore[return] on function def
     elif layer_name in layers:
         return layer_name
     else:
@@ -452,19 +479,21 @@ def get_valid_layer_name(input_file, layer_name=""):
         )
 
 
-def geom_type_check(geom_type):
+def _geom_type_check(geom_type: str) -> None:
     if geom_type not in SUPPORTED_GEOM_TYPES:
         raise ValueError(
             f"Unsupported GeometryType {geom_type}, supported GeometryTypes are: {', '.join(SUPPORTED_GEOM_TYPES)}"
         )
 
 
-def crs_is_geographic(crs_string: str) -> bool:
+def _crs_is_geographic(crs_string: str) -> bool:
     crs = CRS.from_authority(*crs_string.split(":"))
     return crs.is_geographic
 
 
-def get_coord_precision(transformer: Transformer):
+def _get_coord_precision(transformer: Transformer) -> int:
+    if transformer.source_crs is None:
+        raise ValueError("transformer.source_crs is None")
     is_geographic = transformer.source_crs.is_geographic
     coord_precision = DEFAULT_PRECISION_PROJECTED
     if is_geographic:
@@ -472,26 +501,17 @@ def get_coord_precision(transformer: Transformer):
     return coord_precision
 
 
-def get_transformer(source_crs: str, target_crs: str):
+def _get_transformer(source_crs: str, target_crs: str) -> Transformer:
     source_crs_crs = CRS.from_authority(*source_crs.split(":"))
     target_crs_crs = CRS.from_authority(*target_crs.split(":"))
     return Transformer.from_crs(source_crs_crs, target_crs_crs, always_xy=True)
 
 
-def get_supported_extensions() -> list[str]:
+def _get_supported_extensions() -> list[str]:
     return list(itertools.chain.from_iterable(SUPPORTED_FILE_FORMATS.values()))
 
 
-def file_is_supported_fileformat(filepath: str) -> bool:
+def _file_is_supported_fileformat(filepath: str) -> bool:
     ext = pathlib.Path(filepath).suffix
     # flatten list of get_driver_by_file_extensionlists
-    return ext in get_supported_extensions()
-
-
-def get_driver_by_file_extension(extension: str) -> str:
-    for key, value in SUPPORTED_FILE_FORMATS.items():
-        if extension in value:
-            return key
-    raise ValueError(
-        f"file extension '{extension}' not found in list of supported extensions: {', '.join(get_supported_extensions())}"
-    )
+    return ext in _get_supported_extensions()

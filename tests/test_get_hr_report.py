@@ -2,9 +2,9 @@ import json
 
 from geodense.lib import (
     TRANSFORM_CRS,
+    _get_transformer,
     check_density_geometry_coordinates,
     get_cmd_result_message,
-    get_transformer,
 )
 
 # TODO: add test to test content of error message
@@ -14,7 +14,7 @@ def test_get_empty_hr_report(linestring_feature_multiple_linesegments):
     feature = json.loads(linestring_feature_multiple_linesegments)
     result = []
     max_segment_length = 20000
-    transformer = get_transformer("EPSG:28992", TRANSFORM_CRS)
+    transformer = _get_transformer("EPSG:28992", TRANSFORM_CRS)
 
     check_density_geometry_coordinates(
         feature["geometry"]["coordinates"], transformer, max_segment_length, result
@@ -30,7 +30,7 @@ def test_get_hr_report(linestring_feature_multiple_linesegments):
     feature = json.loads(linestring_feature_multiple_linesegments)
     result = []
     max_segment_length = 10
-    transformer = get_transformer("EPSG:28992", TRANSFORM_CRS)
+    transformer = _get_transformer("EPSG:28992", TRANSFORM_CRS)
     check_density_geometry_coordinates(
         feature["geometry"]["coordinates"], transformer, max_segment_length, result
     )
