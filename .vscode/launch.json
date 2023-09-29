@@ -12,9 +12,10 @@
             "args": [
                 "densify",
                 "${workspaceFolder}/tests/data/linestrings.json",
-                "${workspaceFolder}/out-data/linestrings-out.json",
+                "${workspaceFolder}/out-data/out.json",
                 "--max-segment-length", "5000"
             ],
+            "preLaunchTask": "clean-output",
             "justMyCode": false
         },
         {
@@ -25,8 +26,9 @@
             "args": [
                 "densify",
                 "${workspaceFolder}/tests/data/linestrings.json",
-                "${workspaceFolder}/out-data/linestrings-out.shp"
+                "${workspaceFolder}/out-data/out.shp"
             ],
+            "preLaunchTask": "clean-output-shp",
             "justMyCode": false
         },
         {
@@ -37,10 +39,11 @@
             "args": [
                 "densify",
                 "${workspaceFolder}/tests/data/linestrings.gpkg",
-                "${workspaceFolder}/out-data/polygonen-out.gpkg",
+                "${workspaceFolder}/out-data/out.gpkg",
                 "--max-segment-length", "5000",
                 "--layer", "polygonen"
             ],
+            "preLaunchTask": "clean-output-gpkg",
             "justMyCode": false
         },
         {
@@ -51,7 +54,7 @@
             "args": [
                 "densify",
                 "${workspaceFolder}/tests/data/multipolygon.json",
-                "${workspaceFolder}/out-data/multipolygon-out.json",
+                "${workspaceFolder}/out-data/out.json",
                 "--max-segment-length", "5000"
             ],
             "justMyCode": false
@@ -64,7 +67,7 @@
             "args": [
                 "densify",
                 "${workspaceFolder}/tests/data/polygons.json",
-                "${workspaceFolder}/out-data/polygons-out.json",
+                "${workspaceFolder}/out-data/out.json",
                 "--max-segment-length", "5000"
             ],
             "justMyCode": false
@@ -77,10 +80,25 @@
             "args": [
                 "densify",
                 "${workspaceFolder}/tests/data/linestrings_3d.json",
-                "${workspaceFolder}/out-data/test-3d.json",
+                "${workspaceFolder}/out-data/out.json",
                 "--max-segment-length", "5000"
             ],
-            "justMyCode": false
+            "justMyCode": false,
+            "preLaunchTask": "clean-output-json",
+        },
+        {
+            "name": "Python: densify linestring 3d - GPKG",
+            "type": "python",
+            "request": "launch",
+            "module": "geodense.main",
+            "args": [
+                "densify",
+                "${workspaceFolder}/tests/data/linestrings_3d.gpkg",
+                "${workspaceFolder}/out-data/out.gpkg",
+                "--max-segment-length", "5000"
+            ],
+            "justMyCode": false,
+            "preLaunchTask": "clean-output-gpkg",
         },
         {
             "name": "Python: check density polygons",

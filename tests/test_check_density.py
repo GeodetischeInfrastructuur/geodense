@@ -1,6 +1,7 @@
 import json
 import os
 from contextlib import nullcontext as does_not_raise
+from unittest import mock
 
 import pytest
 from geodense.lib import (
@@ -68,3 +69,34 @@ def test_density_check_geospatial_file_unsupported_file_format(
     input_file = os.path.join(test_dir, "data", input_file)
     with expectation:
         assert isinstance(check_density_file(input_file, 1000, "lijnen"), list)
+
+
+def test_check_density_3d(linestring_3d_feature):
+    feature_t = json.loads(linestring_3d_feature)
+
+    src_crs = "EPSG:7415"
+    transformer = _get_transformer(src_crs, TRANSFORM_CRS)
+    result = []
+
+    check_density_geometry_coordinates(
+        feature_t["geometry"]["coordinates"], transformer, 500, result
+    )
+
+    assert len(result) > 0
+
+
+@mock.patch("pyproj.Geod.inv", mock.MagicMock(return_value=(None, None, float("NaN"))))
+def test_densify_geospatial_file_exception(linestring_3d_feature):
+    feature_t = json.loads(linestring_3d_feature)
+
+    src_crs = "EPSG:7415"
+    transformer = _get_transformer(src_crs, TRANSFORM_CRS)
+    result = []
+
+    with pytest.raises(
+        ValueError,
+        match=r"unable to calculate geodesic distance, result: nan, expected: floating-point number",
+    ):
+        check_density_geometry_coordinates(
+            feature_t["geometry"]["coordinates"], transformer, 500, result
+        )

@@ -83,19 +83,36 @@ def test_linestring_transformed(linestring_feature):
     assert len(feature_t["geometry"]["coordinates"]) == feature_t_coord_length
 
 
-def test_linestring_3d_raises_exception(linestring_3d_feature):
+def test_densify_3d_source_projection(linestring_3d_feature):
     feature_t = json.loads(linestring_3d_feature)
 
     src_crs = "EPSG:7415"
     transformer = _get_transformer(src_crs, TRANSFORM_CRS)
 
-    with pytest.raises(
-        ValueError,
-        match=r"3 dimensional geometries are not supported",
-    ):
-        densify_geometry_coordinates(
-            feature_t["geometry"]["coordinates"], transformer, 1000, False
-        )
+    result = densify_geometry_coordinates(
+        feature_t["geometry"]["coordinates"], transformer, 1000, True
+    )
+
+    for i, (_, _, h) in enumerate(result):
+        assert h == (
+            i * 10
+        ), f"height is not linear interpolated with increments of 10 - height: {h}, expected height: {i*10}"
+
+
+def test_densify_3d(linestring_3d_feature):
+    feature_t = json.loads(linestring_3d_feature)
+
+    src_crs = "EPSG:7415"
+    transformer = _get_transformer(src_crs, TRANSFORM_CRS)
+
+    result = densify_geometry_coordinates(
+        feature_t["geometry"]["coordinates"], transformer, 1000, False
+    )
+
+    for i, (_, _, h) in enumerate(result):
+        assert h == (
+            i * 10
+        ), f"height is not linear interpolated with increments of 10 - height: {h}, expected height: {i*10}"
 
 
 def test_polygon_with_hole_transformed(polygon_feature_with_holes):

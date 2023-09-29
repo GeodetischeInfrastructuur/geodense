@@ -120,7 +120,7 @@ using the geodesic (great-circle) calculation for accurate CRS transformations",
         "-l",
         type=str,
         help="layer to use in multi-layer geospatial input files",
-        default="",
+        default=None,
     )
     densify_parser.add_argument(
         "--in-projection",
@@ -152,7 +152,7 @@ using the geodesic (great-circle) calculation for accurate CRS transformations",
         "-l",
         type=str,
         help="layer to use in multi-layer geospatial input files",
-        default="",
+        default=None,
     )
     check_density_parser.set_defaults(func=check_density_cmd)
 
