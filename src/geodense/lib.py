@@ -2,6 +2,8 @@ import itertools
 import math
 import os
 import pathlib
+import re
+import sys
 from collections.abc import Sequence
 from typing import Any, Callable, Optional, Union
 
@@ -16,6 +18,7 @@ SUPPORTED_GEOM_TYPES = [
     "Polygon",
     "MultiPolygon",
     "MultiLineString",
+    "GeometryCollection",
 ]
 
 SUPPORTED_GEOM_TYPES = [
@@ -120,7 +123,10 @@ def check_density_geometry_coordinates(
 
 
 def check_density_file(
-    input_file: str, max_segment_length: float, layer: str
+    input_file: str,
+    max_segment_length: float,
+    layer: str,
+    src_crs: Optional[str] = None,
 ) -> report_type:
     if not _file_is_supported_fileformat(input_file):
         raise ValueError(
@@ -133,6 +139,8 @@ def check_density_file(
 
     with fiona.open(input_file, layer=layer) as src:
         profile = src.profile
+
+        override_src_crs(src_crs, profile)
         geom_type = profile["schema"]["geometry"]
         crs = str(profile["crs"])
         _geom_type_check(geom_type)
@@ -187,14 +195,99 @@ def densify_geometry_coordinates(
     )
 
 
-def densify_geospatial_file(
+def search_file_streaming(
+    input_file: str,
+    search_string: str,
+    s_from: Optional[int] = None,
+    start: bool = True,
+) -> Optional[int]:
+    chunk_size = 1024**2  # 1MB
+    with open(input_file, "rb") as f:
+        prev_chunk = None
+        bytes_read = 0
+        if s_from is not None:
+            f.seek(s_from)
+            bytes_read = s_from
+        for chunk in iter(lambda: f.read(chunk_size), b""):
+            new_chunk = chunk
+            if prev_chunk:
+                new_chunk = prev_chunk + chunk
+            if search_string in new_chunk.decode("utf-8"):
+                if not start:
+                    return bytes_read + chunk_size
+                return bytes_read
+            prev_chunk = chunk
+            bytes_read += chunk_size
+        return None
+
+
+def get_crs_json(input_file: str) -> Optional[str]:
+    """Get CRS identifier string (format: `$authority:$idenifier`) from JSON. Streaming search with chunksize of 1MB, to prevent loading full file in memory.
+
+    Arguments:
+        input_file -- GeoJSON file to retrieve CRS identifier string for
+
+    Returns:
+        CRS identifier string (format: `$authority:$idenifier`), None if no CRS found
+    """
+    with open(input_file, "rb") as f:
+        f.seek(0, os.SEEK_END)
+        f_size = f.tell()
+        start: Optional[int] = 0
+        while True:  # loop until urn found or start/end returns None
+            start = search_file_streaming(input_file, '"crs"', start)
+            if start is None:
+                break  # loop exit
+            end = search_file_streaming(input_file, "}", start, False)
+            if end is None:  # in case of invalid json
+                break  # loop exit
+            if end > f_size:
+                end = f_size
+            f.seek(start)
+            crs_json_string = f.read(end)
+            r1 = re.findall(
+                r'"urn:ogc:def:crs:.+:.*:.+"', crs_json_string.decode("utf-8")
+            )
+            if len(r1) != 1:
+                # increment start bytes
+                start += 1024**2
+                continue
+            else:
+                urn_crs_str = r1[0].replace('"', "")
+                m2 = re.match(
+                    r"^urn:ogc:def:crs:(.*?):.*?:(.*?)$", urn_crs_str
+                )  # extract auth:identifier crs_str, match is ensured
+                # type ignore since regex will return result, because of earlier match (r1)
+                return f"{m2[1]}:{m2[2]}"  # type: ignore
+    return None
+
+
+def densify_file(  # noqa: PLR0913
     input_file_path: str,
     output_file_path: str,
     layer: Optional[str] = None,
     max_segment_length: Optional[float] = None,
     densify_in_projection: bool = False,
+    src_crs: Optional[str] = None,
 ) -> None:
-    _validate_densify_geospatial_file_file_args(input_file_path, output_file_path)
+    """_summary_
+
+    Arguments:
+        input_file_path
+        output_file_path
+
+    Keyword Arguments:
+        layer -- layer name, when no specified and multilayer file, first layer will be used (default: {None})
+        max_segment_length -- max segment length to use for densification (default: {None})
+        densify_in_projection -- user src projection for densification (default: {False})
+        src_crs -- override src crs of input file (default: {None})
+
+    Raises:
+        ValueError: application errors
+        pyproj.exceptions.CRSError: when crs cannot be found by pyproj
+
+    """
+    _validate_densify_file_file_args(input_file_path, output_file_path)
 
     _, output_file_ext = os.path.splitext(output_file_path)
 
@@ -205,6 +298,15 @@ def densify_geospatial_file(
     with fiona.open(input_file_path, layer=layer) as src:
         profile = src.profile
         geom_type = profile["schema"]["geometry"]
+        _geom_type_check(geom_type)
+
+        is_geojson_driver = profile["driver"] == "GeoJSON"
+        if is_geojson_driver:
+            check_crs_geojson_defined(input_file_path, src_crs, profile)
+
+        # override crs if supplied in src_crs argument
+        override_src_crs(src_crs, profile)
+
         crs = str(profile["crs"])
 
         if densify_in_projection and _crs_is_geographic(crs):
@@ -213,16 +315,12 @@ def densify_geospatial_file(
 projected coordinates reference systems, crs {crs} is a geographic crs"
             )
 
-        _geom_type_check(geom_type)
-
         prec = (
             DEFAULT_PRECISION_GEOGRAPHIC
             if _crs_is_geographic(crs)
             else DEFAULT_PRECISION_PROJECTED
         )
-
         # COORDINATE_PRECISION is only a lco (layer creation option) for OGR GeoJSON driver
-        is_geojson_driver = profile["driver"] == "GeoJSON"
         fun_kwargs = {"COORDINATE_PRECISION": prec} if is_geojson_driver else {}
 
         with fiona.open(
@@ -233,21 +331,61 @@ projected coordinates reference systems, crs {crs} is a geographic crs"
             transformer = _get_transformer(crs, TRANSFORM_CRS)
             for i, ft in enumerate(src):
                 try:
-                    coordinates_t = densify_geometry_coordinates(
-                        ft.geometry.coordinates,
-                        transformer,
-                        max_segment_length,
-                        densify_in_projection,
-                    )
-                    geom = fiona.Geometry(
-                        coordinates=coordinates_t, type=geom_type.replace("3D ", "")
-                    )
+                    if ft.geometry.type == "GeometryCollection":
+                        new_geoms = []
+                        for geom in ft.geometry.geometries:
+                            coordinates_t = densify_geometry_coordinates(
+                                geom.coordinates,
+                                transformer,
+                                max_segment_length,
+                                densify_in_projection,
+                            )
+                            new_geom = fiona.Geometry(
+                                coordinates=coordinates_t, type=geom.type
+                            )
+                            new_geoms.append(new_geom)
+                        geom = fiona.Geometry(
+                            geometries=new_geoms, type="GeometryCollection"
+                        )
+                    else:
+                        coordinates_t = densify_geometry_coordinates(
+                            ft.geometry.coordinates,
+                            transformer,
+                            max_segment_length,
+                            densify_in_projection,
+                        )
+                        geom = fiona.Geometry(
+                            coordinates=coordinates_t, type=ft.geometry.type
+                        )
                     new_ft = fiona.Feature(geometry=geom, properties=ft.properties)
                     dst.write(new_ft)
                 except Exception as e:
                     raise ValueError(
                         f"Unexpected error occured while processing feature [{i}]: {e}"
                     ) from e
+
+
+def override_src_crs(src_crs: Optional[str], profile: dict) -> None:
+    if src_crs:
+        crs_obj = CRS.from_authority(*src_crs.split(":"))
+        profile["crs"] = crs_obj
+        profile["crs_wkt"] = crs_obj.to_wkt()
+
+
+def check_crs_geojson_defined(
+    input_file_path: str, src_crs: Optional[str], profile: dict
+) -> None:
+    """Check if GeoJSON has CRS defined. Required since fiona/ogr allows opening files containing only a feature or geometry (which cannot contain CRS by spec).
+
+    Arguments:
+        input_file_path -- _description_
+        src_crs -- _description_
+        profile -- _description_
+    """
+    json_crs = get_crs_json(input_file_path)
+    if json_crs is None and src_crs is None:
+        message = f"WARNING: unable to determine source CRS for file {input_file_path}, assumed CRS is {profile['crs']}"
+        print(message, file=sys.stderr)
 
 
 def interpolate_src_proj(
@@ -370,7 +508,7 @@ def _raise_e_if_point_geom(geometry_coordinates: list[Any]) -> None:
         )
 
 
-def _validate_densify_geospatial_file_file_args(
+def _validate_densify_file_file_args(
     input_file_path: str, output_file_path: str
 ) -> None:
     _, input_file_ext = os.path.splitext(input_file_path)

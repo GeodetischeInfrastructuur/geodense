@@ -125,7 +125,7 @@ def test_cli_check_density_cmd(mock_command, test_dir):
 
 
 def test_cli_densify_shows_outputs_error_returns_1(capsys, tmpdir, test_dir):
-    with mock.patch.object(geodense.main, "densify_geospatial_file") as get_mock:
+    with mock.patch.object(geodense.main, "densify_file") as get_mock:
         get_mock.side_effect = ValueError("FOOBAR")
 
         with pytest.raises(SystemExit) as cm:

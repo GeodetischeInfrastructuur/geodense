@@ -1,7 +1,9 @@
 import json
 import os
+import re
 import tempfile
 from contextlib import nullcontext as does_not_raise
+from contextlib import suppress
 from unittest import mock
 
 import pyproj
@@ -10,8 +12,8 @@ from geodense.lib import (
     TRANSFORM_CRS,
     _get_intermediate_nr_points_and_segment_length,
     _get_transformer,
+    densify_file,
     densify_geometry_coordinates,
-    densify_geospatial_file,
 )
 
 
@@ -125,8 +127,6 @@ def test_polygon_with_hole_transformed(polygon_feature_with_holes):
     densify_geometry_coordinates(
         feature_t["geometry"]["coordinates"], transformer, 1000, False
     )
-    test = json.dumps(feature_t, indent=4)
-    print(test)
     assert feature != feature_t
 
 
@@ -191,10 +191,10 @@ def test_get_intermediate_nr_points_and_segment_length():
         _get_intermediate_nr_points_and_segment_length(1000, 1000)
 
 
-def test_densify_geospatial_file(test_dir):
+def test_densify_file(test_dir):
     in_file = "linestrings.json"
     out_file = os.path.join(tempfile.mkdtemp(), in_file)
-    densify_geospatial_file(os.path.join(test_dir, "data", in_file), out_file)
+    densify_file(os.path.join(test_dir, "data", in_file), out_file)
     assert os.path.exists(out_file)
 
 
@@ -221,25 +221,23 @@ def test_densify_geospatial_file(test_dir):
         ("linestrings.json", "linestrings.json", does_not_raise()),
     ],
 )
-def test_densify_geospatial_file_unsupported_file_format(
+def test_densify_file_unsupported_file_format(
     test_dir, input_file, output_file, expectation
 ):
     input_file = os.path.join(test_dir, "data", input_file)
     output_file = os.path.join(tempfile.mkdtemp(), output_file)
     with expectation:
-        assert densify_geospatial_file(input_file, output_file) is None
+        assert densify_file(input_file, output_file) is None
 
 
-def test_densify_geospatial_file_negative(tmpdir, test_dir):
+def test_densify_file_negative(tmpdir, test_dir):
     in_file = "linestrings.json"
     out_file = os.path.join(tmpdir, in_file)
-    densify_geospatial_file(
-        os.path.join(test_dir, "data", in_file), out_file, None, -10000
-    )
+    densify_file(os.path.join(test_dir, "data", in_file), out_file, None, -10000)
     assert os.path.exists(out_file)
 
 
-def test_densify_geospatial_file_exception(tmpdir, test_dir):
+def test_densify_file_exception(tmpdir, test_dir):
     with mock.patch.object(pyproj.Geod, "fwd_intermediate") as get_mock:
         get_mock.side_effect = ValueError("FOOBAR")
         in_file = "linestrings.json"
@@ -248,12 +246,10 @@ def test_densify_geospatial_file_exception(tmpdir, test_dir):
             ValueError,
             match=r"Unexpected error occured while processing feature \[0\]",
         ):
-            densify_geospatial_file(
-                os.path.join(test_dir, "data", in_file), out_file, None, 10000
-            )
+            densify_file(os.path.join(test_dir, "data", in_file), out_file, None, 10000)
 
 
-def test_densify_geospatial_file_in_proj_exc(tmpdir, test_dir):
+def test_densify_file_in_proj_exc(tmpdir, test_dir):
     in_file = "linestrings-4258.json"
     out_file = os.path.join(tmpdir, in_file)
 
@@ -264,12 +260,12 @@ def test_densify_geospatial_file_in_proj_exc(tmpdir, test_dir):
             r"reference systems, crs .+ is a geographic crs"
         ),
     ):
-        densify_geospatial_file(
+        densify_file(
             os.path.join(test_dir, "data", in_file), out_file, None, None, True
         )
 
 
-def test_densify_geospatial_file_input_file_does_not_exist(tmpdir, test_dir):
+def test_densify_file_input_file_does_not_exist(tmpdir, test_dir):
     input_file = os.path.join(test_dir, "foobar.json")
     output_file = os.path.join(tmpdir, "foobar.json")
 
@@ -277,10 +273,10 @@ def test_densify_geospatial_file_input_file_does_not_exist(tmpdir, test_dir):
         ValueError,
         match=(r"input_file .*foobar.json does not exist"),
     ):
-        assert isinstance(densify_geospatial_file(input_file, output_file))
+        assert isinstance(densify_file(input_file, output_file))
 
 
-def test_densify_geospatial_file_output_dir_does_not_exist_raises(test_dir):
+def test_densify_file_output_dir_does_not_exist_raises(test_dir):
     input_file = os.path.join(test_dir, "data", "linestrings.json")
     output_file = os.path.join(test_dir, "foobar", "foobar.json")
 
@@ -288,10 +284,10 @@ def test_densify_geospatial_file_output_dir_does_not_exist_raises(test_dir):
         ValueError,
         match=(r"target directory of output_file .*foobar.json does not exist"),
     ):
-        assert isinstance(densify_geospatial_file(input_file, output_file))
+        assert isinstance(densify_file(input_file, output_file))
 
 
-def test_densify_geospatial_file_input_and_output_equal_raises(test_dir):
+def test_densify_file_input_and_output_equal_raises(test_dir):
     input_file = os.path.join(test_dir, "data", "linestrings.json")
     output_file = os.path.join(test_dir, "data", "linestrings.json")
 
@@ -301,15 +297,47 @@ def test_densify_geospatial_file_input_and_output_equal_raises(test_dir):
             r"input_file and output_file arguments must be different, input_file: .*linestrings.json, output_file: .*linestrings.json"
         ),
     ):
-        assert isinstance(densify_geospatial_file(input_file, output_file))
+        assert isinstance(densify_file(input_file, output_file))
 
 
-def test_densify_geospatial_file_output_file_exists_raises(test_dir):
+def test_densify_file_output_file_exists_raises(test_dir):
     input_file = os.path.join(test_dir, "data", "linestrings.json")
-    output_file = os.path.join(test_dir, "data", "linestrings-4258.json")
+    output_file = os.path.join(
+        test_dir, "data", "linestrings-4258.json"
+    )  # use existing file to check if exception is raised
 
     with pytest.raises(
         ValueError,
         match=(r"output_file .*linestrings-4258.json already exists"),
     ):
-        assert isinstance(densify_geospatial_file(input_file, output_file))
+        densify_file(input_file, output_file)
+
+
+def test_support_geometry_collection(tmpdir, test_dir):
+    input_file = os.path.join(test_dir, "data", "feature-geometry-collection.json")
+    output_file = os.path.join(tmpdir, "geometry.json")
+    densify_file(input_file, output_file, None, None, False, "EPSG:28992")
+
+
+def test_densify_file_invalid_crs_raises(test_dir, tmpdir):
+    input_file = os.path.join(test_dir, "data", "feature-geometry-collection.json")
+    output_file = os.path.join(tmpdir, "geometry.json")
+    with pytest.raises(
+        pyproj.exceptions.CRSError,
+        match=(
+            r"Invalid projection: EPSG:9999999: \(Internal Proj Error: proj_create: crs not found\)"
+        ),
+    ):
+        densify_file(input_file, output_file, None, None, False, "EPSG:9999999")
+
+
+def test_densify_file_json_no_crs_outputs_message_stderr(capsys, test_dir, tmpdir):
+    input_file = os.path.join(test_dir, "data", "geometry.json")
+    output_file = os.path.join(tmpdir, "geometry.json")
+    with suppress(ValueError):
+        densify_file(input_file, output_file)
+    _, err = capsys.readouterr()
+    expected_message_std_err = r"WARNING: unable to determine source CRS for file .*geometry.json, assumed CRS is EPSG:4326\n"
+    assert re.match(
+        expected_message_std_err, err
+    ), f"stderr expected message is: {expected_message_std_err}, actual message was: {err}"

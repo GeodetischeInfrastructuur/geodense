@@ -2,6 +2,7 @@ import argparse
 import sys
 from typing import Optional
 
+import pyproj
 from fiona import supported_drivers
 from rich_argparse import RichHelpFormatter
 
@@ -9,7 +10,7 @@ from geodense.lib import (
     DEFAULT_MAX_SEGMENT_LENGTH,
     SUPPORTED_FILE_FORMATS,
     check_density_file,
-    densify_geospatial_file,
+    densify_file,
     get_cmd_result_message,
 )
 
@@ -50,25 +51,31 @@ def list_formats_cmd() -> None:
         sys.exit(1)
 
 
-def densify_cmd(
+def densify_cmd(  # noqa: PLR0913
     input_file: str,
     output_file: str,
     max_segment_length: Optional[float] = None,
     layer: Optional[str] = None,
     in_projection: bool = False,
+    src_crs: Optional[str] = None,
 ) -> None:
     try:
-        densify_geospatial_file(
-            input_file, output_file, layer, max_segment_length, in_projection
+        densify_file(
+            input_file, output_file, layer, max_segment_length, in_projection, src_crs
         )
-    except ValueError as e:
+    except (ValueError, pyproj.exceptions.CRSError) as e:
         print(CLI_ERROR_MESSAGE_TEMPLATE.format(message=str(e)), file=sys.stderr)
         sys.exit(1)
 
 
-def check_density_cmd(input_file: str, max_segment_length: float, layer: str) -> None:
+def check_density_cmd(
+    input_file: str,
+    max_segment_length: float,
+    layer: str,
+    src_crs: Optional[str] = None,
+) -> None:
     try:
-        result = check_density_file(input_file, max_segment_length, layer)
+        result = check_density_file(input_file, max_segment_length, layer, src_crs)
         cmd_output = get_cmd_result_message(input_file, result, max_segment_length)
 
         if len(result) == 0:
@@ -77,7 +84,7 @@ def check_density_cmd(input_file: str, max_segment_length: float, layer: str) ->
         else:
             print(cmd_output)
             sys.exit(1)
-    except ValueError as e:
+    except (ValueError, pyproj.exceptions.CRSError) as e:
         print(CLI_ERROR_MESSAGE_TEMPLATE.format(message=str(e)), file=sys.stderr)
         sys.exit(1)
 
@@ -130,6 +137,14 @@ using the geodesic (great-circle) calculation for accurate CRS transformations",
         help="densify using source projection (great-circle distance is not used), not applicable when source crs is geographic",
     )
 
+    densify_parser.add_argument(
+        "--src-crs",
+        "-s",
+        type=str,
+        help="override source crs, if not specified the crs found in the input layer will be used",
+        default=None,
+    )
+
     densify_parser.set_defaults(func=densify_cmd)
 
     check_density_parser = subparsers.add_parser(
@@ -152,6 +167,13 @@ using the geodesic (great-circle) calculation for accurate CRS transformations",
         "-l",
         type=str,
         help="layer to use in multi-layer geospatial input files",
+        default=None,
+    )
+    check_density_parser.add_argument(
+        "--src-crs",
+        "-s",
+        type=str,
+        help="override source crs, if not specified the crs found in the input layer will be used",
         default=None,
     )
     check_density_parser.set_defaults(func=check_density_cmd)

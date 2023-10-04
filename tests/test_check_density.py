@@ -86,7 +86,7 @@ def test_check_density_3d(linestring_3d_feature):
 
 
 @mock.patch("pyproj.Geod.inv", mock.MagicMock(return_value=(None, None, float("NaN"))))
-def test_densify_geospatial_file_exception(linestring_3d_feature):
+def test_densify_file_exception(linestring_3d_feature):
     feature_t = json.loads(linestring_3d_feature)
 
     src_crs = "EPSG:7415"
