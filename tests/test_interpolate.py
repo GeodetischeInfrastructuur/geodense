@@ -1,3 +1,4 @@
+import pytest
 from geodense.lib import (
     DEFAULT_PRECISION_GEOGRAPHIC,
     DEFAULT_PRECISION_PROJECTED,
@@ -67,3 +68,45 @@ def test_interpolate_round_geographic():
             for x in p
         ]
     )  # https://stackoverflow.com/a/26
+
+
+@pytest.mark.parametrize(
+    ("linestring", "in_proj", "expectation"),
+    [
+        (
+            [(-10, -10), (0, 0, 0), (10, 10, 10), (20, 20), (30, 30)],
+            False,
+            [
+                (-10, -10),
+                (-5.0, -4.9999),
+                (0, 0, 0),
+                (5.0, 5.0001, 5.0),
+                (10, 10, 10),
+                (15.0, 15.0001),
+                (20, 20),
+                (25.0, 25.0001),
+                (30, 30),
+            ],
+        ),
+        (
+            [(-10, -10), (0, 0, 0), (10, 10, 10), (20, 20), (30, 30)],
+            True,
+            [
+                (-10, -10),
+                (-5.0, -5.0),
+                (0, 0, 0),
+                (5.0, 5.0, 5.0),
+                (10, 10, 10),
+                (15.0, 15.0),
+                (20, 20),
+                (25.0, 25.0),
+                (30, 30),
+            ],
+        ),
+    ],
+)
+def test_interpolate_3d(linestring, in_proj, expectation):
+    linestring_t = linestring[:]  # clone list with slicing
+    transformer = _get_transformer("EPSG:28992", TRANSFORM_CRS)
+    _add_vertices_exceeding_max_segment_length(linestring_t, 10, transformer, in_proj)
+    assert linestring_t == expectation
