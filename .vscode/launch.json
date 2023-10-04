@@ -5,6 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
             "name": "Python: densify linestrings",
             "type": "python",
             "request": "launch",
@@ -13,7 +21,8 @@
                 "densify",
                 "${workspaceFolder}/tests/data/linestrings.json",
                 "${workspaceFolder}/out-data/out.json",
-                "--max-segment-length", "5000"
+                "--max-segment-length",
+                "5000"
             ],
             "preLaunchTask": "clean-output",
             "justMyCode": false
@@ -40,8 +49,10 @@
                 "densify",
                 "${workspaceFolder}/tests/data/linestrings.gpkg",
                 "${workspaceFolder}/out-data/out.gpkg",
-                "--max-segment-length", "5000",
-                "--layer", "polygonen"
+                "--max-segment-length",
+                "5000",
+                "--layer",
+                "polygonen"
             ],
             "preLaunchTask": "clean-output-gpkg",
             "justMyCode": false
@@ -55,7 +66,8 @@
                 "densify",
                 "${workspaceFolder}/tests/data/multipolygon.json",
                 "${workspaceFolder}/out-data/out.json",
-                "--max-segment-length", "5000"
+                "--max-segment-length",
+                "5000"
             ],
             "justMyCode": false
         },
@@ -68,7 +80,8 @@
                 "densify",
                 "${workspaceFolder}/tests/data/polygons.json",
                 "${workspaceFolder}/out-data/out.json",
-                "--max-segment-length", "5000"
+                "--max-segment-length",
+                "5000"
             ],
             "justMyCode": false
         },
@@ -81,7 +94,8 @@
                 "densify",
                 "${workspaceFolder}/tests/data/linestrings_3d.json",
                 "${workspaceFolder}/out-data/out.json",
-                "--max-segment-length", "5000"
+                "--max-segment-length",
+                "5000"
             ],
             "justMyCode": false,
             "preLaunchTask": "clean-output-json",
@@ -95,7 +109,8 @@
                 "densify",
                 "${workspaceFolder}/tests/data/linestrings_3d.gpkg",
                 "${workspaceFolder}/out-data/out.gpkg",
-                "--max-segment-length", "5000"
+                "--max-segment-length",
+                "5000"
             ],
             "justMyCode": false,
             "preLaunchTask": "clean-output-gpkg",
@@ -108,7 +123,8 @@
             "args": [
                 "check-density",
                 "${workspaceFolder}/tests/data/polygons.json",
-                "--max-segment-length", "5000"
+                "--max-segment-length",
+                "5000"
             ],
             "justMyCode": false
         }

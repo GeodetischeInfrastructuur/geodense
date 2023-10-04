@@ -12,6 +12,7 @@ from geodense.lib import (
     _geom_type_check,
     _get_coord_precision,
     _get_transformer,
+    get_crs_json,
 )
 
 
@@ -84,3 +85,20 @@ def test_get_coord_precision_transformer_source_crs_is_none(mock_source_crs):
         match=r"transformer.source_crs is None",
     ):
         _get_coord_precision(transformer)
+
+
+# using fixtures by referencing fixture as string in @pytest.mark.parametrize
+# and calling request.getfixturevalue
+@pytest.mark.parametrize(
+    ("file_path", "expectation"),
+    [
+        ("geometry_path", None),
+        ("geometry_crs_path", "EPSG:28992"),
+        ("invalid_crs_path", None),
+        ("gemeenten_path", "EPSG:28992"),
+    ],
+)
+def test_get_crs_json(file_path, expectation, request):
+    file_path_val = request.getfixturevalue(file_path)
+    crs = get_crs_json(file_path_val)
+    assert crs == expectation
