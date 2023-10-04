@@ -254,6 +254,15 @@ def interpolate_src_proj(
     a: point_type, b: point_type, max_segment_length: float
 ) -> list[point_type]:
     """Interpolate intermediate points between points a and b, with segment_length < max_segment_length. Only returns intermediate points."""
+    three_dimensional_points = (
+        len(a) == THREE_DIMENSIONAL and len(b) == THREE_DIMENSIONAL
+    )
+    if (
+        not three_dimensional_points
+    ):  # if not both three dimensional points, ensure both points are two dimensional
+        a = a[:2]
+        b = b[:2]
+
     dist = math.sqrt((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2)  # Pythagoras
     if dist <= max_segment_length:
         return []
@@ -435,8 +444,10 @@ def _add_vertices_to_line_segment(
     Returns:
         int: number of added vertices
     """
+
     a = linestring[coord_index]
     b = linestring[coord_index + 1]
+
     prec = _get_coord_precision(transformer)
     if not densify_in_projection:
         p = _round_line_segment(
