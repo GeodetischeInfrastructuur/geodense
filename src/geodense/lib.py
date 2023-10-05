@@ -27,9 +27,9 @@ SUPPORTED_GEOM_TYPES = [
 ]
 
 DEFAULT_MAX_SEGMENT_LENGTH = 200
-DEFAULT_PRECISION_GEOGRAPHIC = 9
-DEFAULT_PRECISION_PROJECTED = 4
-DEFAULT_PRECISION_DISTANCE = 4
+DEFAULT_PRECISION_DEGREES = 9
+DEFAULT_PRECISION_METERS = 4
+
 SUPPORTED_FILE_FORMATS = {
     "ESRI Shapefile": [".shp"],
     "FlatGeobuf": [".fgb"],
@@ -37,6 +37,10 @@ SUPPORTED_FILE_FORMATS = {
     "GML": [".gml"],
     "GPKG": [".gpkg"],
 }
+
+
+SINGLE_LAYER_EXTENSIONS = [".json", ".geojson", ".shp", ".fgb"]
+
 ERROR_MESSAGE_UNSUPPORTED_FILE_FORMAT = "Argument {arg_name} {file_path} is of an unsupported fileformat, see list-formats for list of supported file formats"
 THREE_DIMENSIONAL = 3
 point_type = tuple[float, ...]
@@ -169,7 +173,7 @@ def get_cmd_result_message(
     )
     for i, item in enumerate(report):
         ft_index, coordinates_indices = item[0][:1], item[0][1:]
-        distance = round(item[1], DEFAULT_PRECISION_DISTANCE)
+        distance = round(item[1], DEFAULT_PRECISION_METERS)
         ft_report = f"  - features{ft_index}.geometry.segments\
  [{', '.join([str(x) for x  in coordinates_indices])}], distance: {distance}"
         if len(report) - 1 != i:
@@ -293,7 +297,6 @@ def densify_file(  # noqa: PLR0913
 
     max_segment_length = abs(max_segment_length or DEFAULT_MAX_SEGMENT_LENGTH)
     layer = _get_valid_layer_name(input_file_path, layer)
-    single_layer_file_ext = [".json", ".geojson"]
 
     with fiona.open(input_file_path, layer=layer) as src:
         profile = src.profile
@@ -316,18 +319,18 @@ projected coordinates reference systems, crs {crs} is a geographic crs"
             )
 
         prec = (
-            DEFAULT_PRECISION_GEOGRAPHIC
+            DEFAULT_PRECISION_DEGREES
             if _crs_is_geographic(crs)
-            else DEFAULT_PRECISION_PROJECTED
+            else DEFAULT_PRECISION_METERS
         )
         # COORDINATE_PRECISION is only a lco (layer creation option) for OGR GeoJSON driver
-        fun_kwargs = {"COORDINATE_PRECISION": prec} if is_geojson_driver else {}
+        is_geojson_driver = profile["driver"] == "GeoJSON"
+        fun_kwargs: dict = {"COORDINATE_PRECISION": prec} if is_geojson_driver else {}
 
-        with fiona.open(
-            output_file_path, "w", **profile, layer=layer, **fun_kwargs
-        ) if output_file_ext not in single_layer_file_ext else fiona.open(
-            output_file_path, "w", **profile, **fun_kwargs
-        ) as dst:
+        if output_file_ext not in SINGLE_LAYER_EXTENSIONS:
+            fun_kwargs["layer"] = layer
+
+        with fiona.open(output_file_path, "w", **profile, **fun_kwargs) as dst:
             transformer = _get_transformer(crs, TRANSFORM_CRS)
             for i, ft in enumerate(src):
                 try:
@@ -467,7 +470,10 @@ def interpolate_geodesic(
                 tuple(
                     (
                         *back_transformer.transform(lon, lat),
-                        (height_a + ((i + 1) * delta_height_per_point)),
+                        round(
+                            (height_a + ((i + 1) * delta_height_per_point)),
+                            DEFAULT_PRECISION_METERS,
+                        ),
                     )
                 )
                 for i, (lon, lat) in enumerate(zip(r.lons, r.lats))
@@ -570,7 +576,7 @@ def _add_vertices_to_line_segment(
     max_segment_length: float,
     densify_in_projection: bool = False,
 ) -> int:
-    """Adds vertices to line segment in place, and returns number of vertices added.
+    """Adds vertices to linestring in place, and returns number of vertices added to linestring.
 
     Args:
         ft_linesegment (_type_): line segment to add vertices
@@ -588,26 +594,31 @@ def _add_vertices_to_line_segment(
 
     prec = _get_coord_precision(transformer)
     if not densify_in_projection:
-        p = _round_line_segment(
-            interpolate_geodesic(a, b, max_segment_length, transformer), prec
+        p = list(
+            [
+                _round_coordinates(x, prec)
+                for x in interpolate_geodesic(a, b, max_segment_length, transformer)
+            ]
         )
     else:
-        p = _round_line_segment(interpolate_src_proj(a, b, max_segment_length), prec)
+        p = list(
+            [
+                _round_coordinates(x, prec)
+                for x in interpolate_src_proj(a, b, max_segment_length)
+            ]
+        )
 
-    result = linestring
-
-    result[coord_index] = tuple([round(x, prec) for x in result[coord_index]])
-    result[coord_index + 1] = tuple([round(x, prec) for x in result[coord_index + 1]])
-
-    result[coord_index + 1 : coord_index + 1] = p
-
+    linestring[coord_index] = _round_coordinates(linestring[coord_index], prec)
+    linestring[coord_index + 1] = _round_coordinates(linestring[coord_index + 1], prec)
+    linestring[coord_index + 1 : coord_index + 1] = p
     return len(p)
 
 
-def _round_line_segment(
-    l_segment: list[point_type], precision: int
-) -> list[point_type]:
-    return list([tuple(round(y, precision) for y in x) for x in l_segment])
+def _round_coordinates(coordinates: tuple, position_precision: int) -> tuple:
+    result = tuple([round(x, position_precision) for x in coordinates[:2]])
+    if len(coordinates) == THREE_DIMENSIONAL:
+        result = (*result, round(coordinates[2], DEFAULT_PRECISION_METERS))
+    return result
 
 
 def _add_vertices_exceeding_max_segment_length(
@@ -681,10 +692,9 @@ def _crs_is_geographic(crs_string: str) -> bool:
 def _get_coord_precision(transformer: Transformer) -> int:
     if transformer.source_crs is None:
         raise ValueError("transformer.source_crs is None")
-    is_geographic = transformer.source_crs.is_geographic
-    coord_precision = DEFAULT_PRECISION_PROJECTED
-    if is_geographic:
-        coord_precision = DEFAULT_PRECISION_GEOGRAPHIC
+    coord_precision = DEFAULT_PRECISION_METERS
+    if transformer.source_crs.is_geographic:
+        coord_precision = DEFAULT_PRECISION_DEGREES
     return coord_precision
 
 

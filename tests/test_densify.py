@@ -198,7 +198,6 @@ def test_densify_file(test_dir):
     assert os.path.exists(out_file)
 
 
-# TODO: test conversion from geojson to geopackage...
 @pytest.mark.parametrize(
     ("input_file", "output_file", "expectation"),
     [
