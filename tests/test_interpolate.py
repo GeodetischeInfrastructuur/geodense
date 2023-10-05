@@ -1,7 +1,7 @@
 import pytest
 from geodense.lib import (
-    DEFAULT_PRECISION_GEOGRAPHIC,
-    DEFAULT_PRECISION_PROJECTED,
+    DEFAULT_PRECISION_DEGREES,
+    DEFAULT_PRECISION_METERS,
     TRANSFORM_CRS,
     _add_vertices_exceeding_max_segment_length,
     _add_vertices_to_line_segment,
@@ -45,7 +45,7 @@ def test_interpolate_round_projected():
 
     assert all(
         [
-            str(x)[::-1].find(".") == DEFAULT_PRECISION_PROJECTED
+            str(x)[::-1].find(".") == DEFAULT_PRECISION_METERS
             for p in points_proj
             for x in p
         ]
@@ -63,7 +63,7 @@ def test_interpolate_round_geographic():
 
     assert all(
         [
-            str(x)[::-1].find(".") == DEFAULT_PRECISION_GEOGRAPHIC
+            str(x)[::-1].find(".") == DEFAULT_PRECISION_DEGREES
             for p in points_geog
             for x in p
         ]

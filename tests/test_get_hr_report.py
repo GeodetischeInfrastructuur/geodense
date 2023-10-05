@@ -7,8 +7,6 @@ from geodense.lib import (
     get_cmd_result_message,
 )
 
-# TODO: add test to test content of error message
-
 
 def test_get_empty_hr_report(linestring_feature_multiple_linesegments):
     feature = json.loads(linestring_feature_multiple_linesegments)

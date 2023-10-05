@@ -65,7 +65,6 @@ def test_cli_densify_cmd(mock_command, tmpdir, test_dir):
     ):
         main()
 
-    # TODO: test all CLI options
     assert mock_command.call_args.kwargs["input_file"] == in_filepath
     assert mock_command.call_args.kwargs["output_file"] == out_filepath
     assert mock_command.call_args.kwargs["max_segment_length"] == float(
@@ -116,7 +115,6 @@ def test_cli_check_density_cmd(mock_command, test_dir):
     ):
         main()
 
-    # TODO: test all CLI options
     assert mock_command.call_args.kwargs["input_file"] == in_filepath
     assert mock_command.call_args.kwargs["max_segment_length"] == float(
         max_segment_length
