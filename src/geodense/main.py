@@ -93,7 +93,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="geodense",
         description="Check density of, and densify geometries \
-using the geodesic (great-circle) calculation for accurate CRS transformations",
+using the geodesic (ellipsoidal great-circle) calculation for accurate CRS transformations",
         epilog="Created by https://www.nsgi.nl/",
         formatter_class=RichHelpFormatter,
     )
@@ -110,7 +110,7 @@ using the geodesic (great-circle) calculation for accurate CRS transformations",
     densify_parser = subparsers.add_parser(
         "densify",
         formatter_class=parser.formatter_class,
-        description="Densify (multi)polygon and (multi)linestring geometries along the great-circle using the GRS 1980 ellipsoid (with ETRS89 - EPSG:4258). See the list-formats command for a list of supported file formats. File format of input_file and output_file should match. When supplying 3D coordinates height is linear interpolated, for both geographic CRSs with ellipsoidal height and compound CRSs with physical height.",
+        description="Densify (multi)polygon and (multi)linestring geometries along the geodesic (ellipsoidal great-circle) in ETRS89 (EPSG:4258). See the list-formats command for a list of supported file formats. File format of input_file and output_file should match. When supplying 3D coordinates, the height is linear interpolated for both geographic CRSs with ellipsoidal height and for compound CRSs with physical height.",
     )
     densify_parser.add_argument("input_file", type=str)
     densify_parser.add_argument("output_file", type=str)
@@ -134,14 +134,14 @@ using the geodesic (great-circle) calculation for accurate CRS transformations",
         "-p",
         action="store_true",
         default=False,
-        help="densify using source projection (great-circle distance is not used), not applicable when source crs is geographic",
+        help="densify using linear interpolation in source projection instead of the geodesic, not applicable when source CRS is geographic",
     )
 
     densify_parser.add_argument(
         "--src-crs",
         "-s",
         type=str,
-        help="override source crs, if not specified the crs found in the input layer will be used",
+        help="override source CRS, if not specified then the CRS found in the input layer will be used",
         default=None,
     )
 
@@ -150,7 +150,7 @@ using the geodesic (great-circle) calculation for accurate CRS transformations",
     check_density_parser = subparsers.add_parser(
         "check-density",
         formatter_class=parser.formatter_class,
-        description="Check density of (multi)polygon and (multi)linestring geometries based on great-circle distance using the GRS 1980 ellipsoid (with ETRS89 - EPSG:4258). \
+        description="Check density of (multi)polygon and (multi)linestring geometries based on geodesic (ellipsoidal great-circle) distance in ETRS89 (EPSG:4258). \
         When result of check is OK the program will return with exit code 0, when result \
         is FAILED the program will return with exit code 1. See the list-formats command for a list of supported file formats.",
     )
@@ -173,7 +173,7 @@ using the geodesic (great-circle) calculation for accurate CRS transformations",
         "--src-crs",
         "-s",
         type=str,
-        help="override source crs, if not specified the crs found in the input layer will be used",
+        help="override source CRS, if not specified then the CRS found in the input layer will be used",
         default=None,
     )
     check_density_parser.set_defaults(func=check_density_cmd)
