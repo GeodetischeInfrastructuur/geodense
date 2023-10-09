@@ -44,13 +44,13 @@ Use either `geodense` or the short `gden` alias:
 ```txt
 $ geodense --help
 
-Usage: geodense [-h] {densify,check-density} ...
+Usage: geodense [-h] {list-formats,densify,check-density} ...
 
-Check density of, and densify geometries using the geodesic (great-circle)
+Check density of, and densify geometries using the geodesic (ellpsoidal great-circle)
 calculation for accurate CRS transformations
 
 Commands:
-  {densify,check-density}
+  {list-formats,densify,check-density}
 
 Options:
   -h, --help            show this help message and exit
