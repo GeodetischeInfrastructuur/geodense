@@ -7,12 +7,12 @@ from fiona import supported_drivers
 from rich_argparse import RichHelpFormatter
 
 from geodense.lib import (
-    DEFAULT_MAX_SEGMENT_LENGTH,
     SUPPORTED_FILE_FORMATS,
     check_density_file,
     densify_file,
     get_cmd_result_message,
 )
+from geodense.models import DEFAULT_MAX_SEGMENT_LENGTH
 
 CLI_ERROR_MESSAGE_TEMPLATE = "ERROR: {message}"
 
@@ -57,11 +57,18 @@ def densify_cmd(  # noqa: PLR0913
     max_segment_length: Optional[float] = None,
     layer: Optional[str] = None,
     in_projection: bool = False,
+    overwrite: bool = False,
     src_crs: Optional[str] = None,
 ) -> None:
     try:
         densify_file(
-            input_file, output_file, layer, max_segment_length, in_projection, src_crs
+            input_file,
+            output_file,
+            layer,
+            max_segment_length,
+            in_projection,
+            overwrite,
+            src_crs,
         )
     except (ValueError, pyproj.exceptions.CRSError) as e:
         print(CLI_ERROR_MESSAGE_TEMPLATE.format(message=str(e)), file=sys.stderr)
@@ -135,6 +142,13 @@ using the geodesic (ellipsoidal great-circle) calculation for accurate CRS trans
         action="store_true",
         default=False,
         help="densify using linear interpolation in source projection instead of the geodesic, not applicable when source CRS is geographic",
+    )
+    densify_parser.add_argument(
+        "--overwrite",
+        "-o",
+        action="store_true",
+        default=False,
+        help="overwrite output file if exists",
     )
 
     densify_parser.add_argument(

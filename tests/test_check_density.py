@@ -5,11 +5,11 @@ from unittest import mock
 
 import pytest
 from geodense.lib import (
-    TRANSFORM_CRS,
-    _get_transformer,
     check_density_file,
     check_density_geometry_coordinates,
 )
+from geodense.models import DenseConfig
+from pyproj import CRS
 
 
 def test_check_density(test_dir):
@@ -22,9 +22,9 @@ def test_check_density(test_dir):
 def test_check_density_not_pass(linestring_feature):
     feature_200 = json.loads(linestring_feature)
     result = []
-    transformer = _get_transformer("EPSG:28992", TRANSFORM_CRS)
+    d_conf = DenseConfig(CRS.from_epsg(28992))
     check_density_geometry_coordinates(
-        feature_200["geometry"]["coordinates"], transformer, 200, result
+        feature_200["geometry"]["coordinates"], d_conf, result
     )
     assert len(result) > 0
 
@@ -32,9 +32,9 @@ def test_check_density_not_pass(linestring_feature):
 def test_check_density_pass_linestring(linestring_feature_5000):
     feature = json.loads(linestring_feature_5000)
     result = []
-    transformer = _get_transformer("EPSG:28992", TRANSFORM_CRS)
+    d_conf = DenseConfig(CRS.from_epsg(28992), 5000)
     check_density_geometry_coordinates(
-        feature["geometry"]["coordinates"], transformer, 5000, result
+        feature["geometry"]["coordinates"], d_conf, result
     )
     assert len(result) == 0
 
@@ -42,10 +42,10 @@ def test_check_density_pass_linestring(linestring_feature_5000):
 def test_check_density_polygon_with_hole_not_pass(polygon_feature_with_holes):
     feature = json.loads(polygon_feature_with_holes)
     result = []
-    transformer = _get_transformer("EPSG:28992", TRANSFORM_CRS)
+    d_conf = DenseConfig(CRS.from_epsg(28992), 5000)
 
     check_density_geometry_coordinates(
-        feature["geometry"]["coordinates"], transformer, 5000, result
+        feature["geometry"]["coordinates"], d_conf, result
     )
     assert len(result) > 0
 
@@ -74,12 +74,12 @@ def test_density_check_geospatial_file_unsupported_file_format(
 def test_check_density_3d(linestring_3d_feature):
     feature_t = json.loads(linestring_3d_feature)
 
-    src_crs = "EPSG:7415"
-    transformer = _get_transformer(src_crs, TRANSFORM_CRS)
+    d_conf = DenseConfig(CRS.from_epsg(7415), 500)
+
     result = []
 
     check_density_geometry_coordinates(
-        feature_t["geometry"]["coordinates"], transformer, 500, result
+        feature_t["geometry"]["coordinates"], d_conf, result
     )
 
     assert len(result) > 0
@@ -89,8 +89,7 @@ def test_check_density_3d(linestring_3d_feature):
 def test_densify_file_exception(linestring_3d_feature):
     feature_t = json.loads(linestring_3d_feature)
 
-    src_crs = "EPSG:7415"
-    transformer = _get_transformer(src_crs, TRANSFORM_CRS)
+    d_conf = DenseConfig(CRS.from_epsg(7415), 500)
     result = []
 
     with pytest.raises(
@@ -98,5 +97,5 @@ def test_densify_file_exception(linestring_3d_feature):
         match=r"unable to calculate geodesic distance, result: nan, expected: floating-point number",
     ):
         check_density_geometry_coordinates(
-            feature_t["geometry"]["coordinates"], transformer, 500, result
+            feature_t["geometry"]["coordinates"], d_conf, result
         )

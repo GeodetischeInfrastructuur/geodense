@@ -9,32 +9,31 @@ from unittest import mock
 import pyproj
 import pytest
 from geodense.lib import (
-    TRANSFORM_CRS,
     _get_intermediate_nr_points_and_segment_length,
-    _get_transformer,
     densify_file,
     densify_geometry_coordinates,
 )
+from geodense.models import DenseConfig
 
 
 def test_point_raises_exception(point_feature):
     feature = json.loads(point_feature)
+    c = DenseConfig(pyproj.CRS.from_epsg(28992))
+
     with pytest.raises(
         ValueError,
         match=r"received point geometry coordinates, instead of \(multi\)linestring",
     ):
-        densify_geometry_coordinates(feature["geometry"]["coordinates"], "EPSG:28992")
+        densify_geometry_coordinates(feature["geometry"]["coordinates"], c)
 
 
 def test_linestring_d10_transformed(linestring_d10_feature):
     feature = json.loads(linestring_d10_feature)
     feature_t = json.loads(linestring_d10_feature)
-    src_crs = "EPSG:28992"
-    transformer = _get_transformer(src_crs, TRANSFORM_CRS)
 
-    densify_geometry_coordinates(
-        feature_t["geometry"]["coordinates"], transformer, 10, False
-    )
+    c = DenseConfig(pyproj.CRS.from_epsg(28992), 10)
+
+    densify_geometry_coordinates(feature_t["geometry"]["coordinates"], c)
 
     feature_coords_length = 2
     feature_t_coord_length = 3
@@ -47,35 +46,31 @@ def test_linestring_d10_transformed(linestring_d10_feature):
 def test_linestring_d10_no_op(linestring_d10_feature):
     feature = json.loads(linestring_d10_feature)
     feature_t = json.loads(linestring_d10_feature)
-    feature_t_s = json.loads(linestring_d10_feature)
+    feature_t_in_proj = json.loads(linestring_d10_feature)
 
-    src_crs = "EPSG:28992"
-    transformer = _get_transformer(src_crs, TRANSFORM_CRS)
+    c = DenseConfig(
+        pyproj.CRS.from_epsg(28992), 15
+    )  # 15 since 15> sqrt(10^2+10^2) -- see linestring_feature_d10.json
+    c_in_proj = DenseConfig(pyproj.CRS.from_epsg(28992), 15, True)
+
+    densify_geometry_coordinates(feature_t["geometry"]["coordinates"], c)
 
     densify_geometry_coordinates(
-        feature_t["geometry"]["coordinates"], transformer, 20, False
-    )
-
-    densify_geometry_coordinates(
-        feature_t["geometry"]["coordinates"], transformer, 20, True
+        feature_t_in_proj["geometry"]["coordinates"], c_in_proj
     )
 
     feature_coords_length = 2
 
     assert feature != feature_t
-    assert len(feature["geometry"]["coordinates"]) == feature_coords_length
     assert len(feature_t["geometry"]["coordinates"]) == feature_coords_length
-    assert len(feature_t_s["geometry"]["coordinates"]) == feature_coords_length
+    assert len(feature_t_in_proj["geometry"]["coordinates"]) == feature_coords_length
 
 
 def test_linestring_transformed(linestring_feature):
     feature = json.loads(linestring_feature)
     feature_t = json.loads(linestring_feature)
-    src_crs = "EPSG:28992"
-    transformer = _get_transformer(src_crs, TRANSFORM_CRS)
-    densify_geometry_coordinates(
-        feature_t["geometry"]["coordinates"], transformer, 1000, False
-    )
+    c = DenseConfig(pyproj.CRS.from_epsg(28992), 1000)
+    densify_geometry_coordinates(feature_t["geometry"]["coordinates"], c)
 
     feature_coords_length = 2
     feature_t_coord_length = 12
@@ -87,13 +82,9 @@ def test_linestring_transformed(linestring_feature):
 
 def test_densify_3d_source_projection(linestring_3d_feature):
     feature_t = json.loads(linestring_3d_feature)
+    c = DenseConfig(pyproj.CRS.from_epsg(7415), 1000, True)
 
-    src_crs = "EPSG:7415"
-    transformer = _get_transformer(src_crs, TRANSFORM_CRS)
-
-    result = densify_geometry_coordinates(
-        feature_t["geometry"]["coordinates"], transformer, 1000, True
-    )
+    result = densify_geometry_coordinates(feature_t["geometry"]["coordinates"], c)
 
     for i, (_, _, h) in enumerate(result):
         assert h == (
@@ -104,12 +95,9 @@ def test_densify_3d_source_projection(linestring_3d_feature):
 def test_densify_3d(linestring_3d_feature):
     feature_t = json.loads(linestring_3d_feature)
 
-    src_crs = "EPSG:7415"
-    transformer = _get_transformer(src_crs, TRANSFORM_CRS)
+    c = DenseConfig(pyproj.CRS.from_epsg(7415), 1000)
 
-    result = densify_geometry_coordinates(
-        feature_t["geometry"]["coordinates"], transformer, 1000, False
-    )
+    result = densify_geometry_coordinates(feature_t["geometry"]["coordinates"], c)
 
     for i, (_, _, h) in enumerate(result):
         assert h == (
@@ -121,12 +109,8 @@ def test_polygon_with_hole_transformed(polygon_feature_with_holes):
     feature = json.loads(polygon_feature_with_holes)
     feature_t = json.loads(polygon_feature_with_holes)
 
-    src_crs = "EPSG:28992"
-    transformer = _get_transformer(src_crs, TRANSFORM_CRS)
-
-    densify_geometry_coordinates(
-        feature_t["geometry"]["coordinates"], transformer, 1000, False
-    )
+    c = DenseConfig(pyproj.CRS.from_epsg(28992), 1000)
+    densify_geometry_coordinates(feature_t["geometry"]["coordinates"], c)
     assert feature != feature_t
 
 
@@ -134,12 +118,9 @@ def test_linestring_transformed_source_proj(linestring_feature):
     feature = json.loads(linestring_feature)
     feature_t = json.loads(linestring_feature)
 
-    src_crs = "EPSG:28992"
-    transformer = _get_transformer(src_crs, TRANSFORM_CRS)
+    c = DenseConfig(pyproj.CRS.from_epsg(28992), 1000, True)
 
-    densify_geometry_coordinates(
-        feature_t["geometry"]["coordinates"], transformer, 1000, True
-    )
+    densify_geometry_coordinates(feature_t["geometry"]["coordinates"], c)
     feature_coords_length = 2
     feature_t_coord_length = 12
 
@@ -152,15 +133,11 @@ def test_maxlinesegment_param(linestring_feature):
     feature_200 = json.loads(linestring_feature)
     feature_1000 = json.loads(linestring_feature)
 
-    src_crs = "EPSG:28992"
-    transformer = _get_transformer(src_crs, TRANSFORM_CRS)
+    c_200 = DenseConfig(pyproj.CRS.from_epsg(28992), 200, False)
+    c_1000 = DenseConfig(pyproj.CRS.from_epsg(28992), 1000, False)
 
-    densify_geometry_coordinates(
-        feature_200["geometry"]["coordinates"], transformer, 200, False
-    )
-    densify_geometry_coordinates(
-        feature_1000["geometry"]["coordinates"], transformer, 1000, False
-    )
+    densify_geometry_coordinates(feature_200["geometry"]["coordinates"], c_200)
+    densify_geometry_coordinates(feature_1000["geometry"]["coordinates"], c_1000)
     assert len(feature_200["geometry"]["coordinates"]) > len(
         feature_1000["geometry"]["coordinates"]
     )
@@ -315,7 +292,7 @@ def test_densify_file_output_file_exists_raises(test_dir):
 def test_support_geometry_collection(tmpdir, test_dir):
     input_file = os.path.join(test_dir, "data", "feature-geometry-collection.json")
     output_file = os.path.join(tmpdir, "geometry.json")
-    densify_file(input_file, output_file, None, None, False, "EPSG:28992")
+    densify_file(input_file, output_file, None, None, False, False, "EPSG:28992")
 
 
 def test_densify_file_invalid_crs_raises(test_dir, tmpdir):
@@ -327,7 +304,7 @@ def test_densify_file_invalid_crs_raises(test_dir, tmpdir):
             r"Invalid projection: EPSG:9999999: \(Internal Proj Error: proj_create: crs not found\)"
         ),
     ):
-        densify_file(input_file, output_file, None, None, False, "EPSG:9999999")
+        densify_file(input_file, output_file, None, None, False, False, "EPSG:9999999")
 
 
 def test_densify_file_json_no_crs_outputs_message_stderr(capsys, test_dir, tmpdir):

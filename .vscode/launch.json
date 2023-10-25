@@ -22,9 +22,9 @@
                 "${workspaceFolder}/tests/data/linestrings.json",
                 "${workspaceFolder}/out-data/out.json",
                 "--max-segment-length",
-                "5000"
+                "5000",
+                "-o"
             ],
-            "preLaunchTask": "clean-output",
             "justMyCode": false
         },
         {
@@ -35,7 +35,8 @@
             "args": [
                 "densify",
                 "${workspaceFolder}/tests/data/linestrings.json",
-                "${workspaceFolder}/out-data/out.shp"
+                "${workspaceFolder}/out-data/out.shp",
+                "-o"
             ],
             "preLaunchTask": "clean-output-shp",
             "justMyCode": false
@@ -52,7 +53,8 @@
                 "--max-segment-length",
                 "5000",
                 "--layer",
-                "polygonen"
+                "polygonen",
+                "-o"
             ],
             "preLaunchTask": "clean-output-gpkg",
             "justMyCode": false
@@ -67,7 +69,8 @@
                 "${workspaceFolder}/tests/data/multipolygon.json",
                 "${workspaceFolder}/out-data/out.json",
                 "--max-segment-length",
-                "5000"
+                "5000",
+                "-o"
             ],
             "justMyCode": false
         },
@@ -81,7 +84,8 @@
                 "${workspaceFolder}/tests/data/polygons.json",
                 "${workspaceFolder}/out-data/out.json",
                 "--max-segment-length",
-                "5000"
+                "5000",
+                "-o"
             ],
             "justMyCode": false
         },
@@ -95,7 +99,8 @@
                 "${workspaceFolder}/tests/data/linestrings_3d.json",
                 "${workspaceFolder}/out-data/out.json",
                 "--max-segment-length",
-                "5000"
+                "5000",
+                "-o"
             ],
             "justMyCode": false,
             "preLaunchTask": "clean-output-json",
@@ -110,7 +115,8 @@
                 "${workspaceFolder}/tests/data/linestrings_3d.gpkg",
                 "${workspaceFolder}/out-data/out.gpkg",
                 "--max-segment-length",
-                "5000"
+                "5000",
+                "-o"
             ],
             "justMyCode": false,
             "preLaunchTask": "clean-output-gpkg",
