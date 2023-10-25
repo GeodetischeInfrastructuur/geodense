@@ -5,14 +5,14 @@ import pathlib
 import re
 import sys
 from collections.abc import Sequence
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Optional
 
 import fiona
-from pyproj import CRS, Geod, Transformer
+from pyproj import CRS, Transformer
 from shapely import LineString, Point
 
-TRANSFORM_CRS = "EPSG:4258"
-ELLIPS = "GRS80"
+from .models import DEFAULT_PRECISION_METERS, DenseConfig
+
 SUPPORTED_GEOM_TYPES = [
     "LineString",
     "Polygon",
@@ -26,9 +26,6 @@ SUPPORTED_GEOM_TYPES = [
     *[f"3D {x}" for x in SUPPORTED_GEOM_TYPES],
 ]
 
-DEFAULT_MAX_SEGMENT_LENGTH = 200
-DEFAULT_PRECISION_DEGREES = 9
-DEFAULT_PRECISION_METERS = 4
 
 SUPPORTED_FILE_FORMATS = {
     "ESRI Shapefile": [".shp"],
@@ -49,26 +46,18 @@ report_type = list[tuple[list[int], float]]
 
 def transfrom_linestrings_in_geometry_coordinates(
     geometry_coordinates: list[Any],
-    transformer: Transformer,
-    transform_fun: Callable[
-        [list[point_type], float, Transformer, bool], list[point_type]
-    ],
-    max_segment_length: Optional[float] = None,
-    densify_in_projection: bool = False,
+    transform_fun: Callable[[list[point_type], DenseConfig], list[point_type]],
+    densify_config: DenseConfig,
 ) -> list[Any]:
-    max_segment_length = abs(max_segment_length or DEFAULT_MAX_SEGMENT_LENGTH)
-
     _raise_e_if_point_geom(geometry_coordinates)
 
     if _is_linestring_geom(geometry_coordinates):
-        geometry_coordinates = transform_fun(
-            geometry_coordinates, max_segment_length, transformer, densify_in_projection
-        )
+        geometry_coordinates = transform_fun(geometry_coordinates, densify_config)
         return geometry_coordinates
     else:
         return [
             transfrom_linestrings_in_geometry_coordinates(
-                e, transformer, transform_fun, max_segment_length, densify_in_projection
+                e, transform_fun, densify_config
             )
             for e in geometry_coordinates
         ]
@@ -76,11 +65,11 @@ def transfrom_linestrings_in_geometry_coordinates(
 
 def check_density_linestring(
     linestring: list[point_type],
-    transformer: Transformer,
-    max_segment_length: float,
+    densify_config: DenseConfig,
     indices: list[int],
 ) -> report_type:
     result = []
+
     for k in range(0, len(linestring) - 1):
         a: point_type = linestring[k]
         b: point_type = linestring[k + 1]
@@ -88,15 +77,24 @@ def check_density_linestring(
         a_2d = tuple(a[:2])
         b_2d = tuple(b[:2])
 
-        a_t = transformer.transform(*a_2d)  # type: ignore
-        b_t = transformer.transform(*b_2d)  # type: ignore
-        g = Geod(ellps=ELLIPS)
+        transformer = densify_config.transformer
+
+        if (
+            densify_config.src_crs.is_projected
+        ):  # only transform to basegeographic crs if src_proj is projected
+            a_t = transformer.transform(*a_2d)  # type: ignore
+            b_t = transformer.transform(*b_2d)  # type: ignore
+        else:  # src_crs is geographic do not transform
+            a_t, b_t = (a_2d, b_2d)
+
+        g = densify_config.geod
+
         _, _, geod_dist = g.inv(*a_t, *b_t, return_back_azimuth=True)  # type: ignore
         if math.isnan(geod_dist):
             raise ValueError(
                 f"unable to calculate geodesic distance, result: {geod_dist}, expected: floating-point number"
             )
-        if geod_dist > (max_segment_length + 0.001):
+        if geod_dist > (densify_config.max_segment_length + 0.001):
             report_indices = [*indices, k]
             result.append((report_indices, geod_dist))
     return result
@@ -104,8 +102,7 @@ def check_density_linestring(
 
 def check_density_geometry_coordinates(
     geometry_coordinates: list[Any],
-    transformer: Transformer,
-    max_segment_length: float,
+    densify_config: DenseConfig,
     result: list,
     indices: Optional[list[int]] = None,
 ) -> None:
@@ -116,14 +113,12 @@ def check_density_geometry_coordinates(
         geometry_coordinates
     ):  # check if at linestring level in coordinates array - list[typle[float,float]]
         linestring_report = check_density_linestring(
-            geometry_coordinates, transformer, max_segment_length, indices
+            geometry_coordinates, densify_config, indices
         )
         result.extend(linestring_report)
     else:
         for i, e in enumerate(geometry_coordinates):
-            check_density_geometry_coordinates(
-                e, transformer, max_segment_length, result, [*indices, i]
-            )
+            check_density_geometry_coordinates(e, densify_config, result, [*indices, i])
 
 
 def check_density_file(
@@ -146,14 +141,14 @@ def check_density_file(
 
         override_src_crs(src_crs, profile)
         geom_type = profile["schema"]["geometry"]
-        crs = str(profile["crs"])
+        src_crs = str(profile["crs"])
         _geom_type_check(geom_type)
-        transformer = _get_transformer(crs, TRANSFORM_CRS)
+
+        c = DenseConfig(CRS.from_authority(*src_crs.split(":")), max_segment_length)
+
         report: list[tuple[list[int], float]] = []
         for i, ft in enumerate(src):
-            check_density_geometry_coordinates(
-                ft.geometry.coordinates, transformer, max_segment_length, report, [i]
-            )
+            check_density_geometry_coordinates(ft.geometry.coordinates, c, report, [i])
     return report
 
 
@@ -183,19 +178,10 @@ def get_cmd_result_message(
 
 
 def densify_geometry_coordinates(
-    geometry_coordinates: list[Any],
-    transformer: Transformer,
-    max_segment_length: Union[float, None] = None,
-    densify_in_projection: bool = False,
+    geometry_coordinates: list[Any], densify_config: DenseConfig
 ) -> list[Any]:
-    max_segment_length = abs(max_segment_length or DEFAULT_MAX_SEGMENT_LENGTH)
-
     return transfrom_linestrings_in_geometry_coordinates(
-        geometry_coordinates,
-        transformer,
-        _add_vertices_exceeding_max_segment_length,
-        max_segment_length,
-        densify_in_projection,
+        geometry_coordinates, _add_vertices_exceeding_max_segment_length, densify_config
     )
 
 
@@ -272,6 +258,7 @@ def densify_file(  # noqa: PLR0913
     layer: Optional[str] = None,
     max_segment_length: Optional[float] = None,
     densify_in_projection: bool = False,
+    overwrite: bool = False,
     src_crs: Optional[str] = None,
 ) -> None:
     """_summary_
@@ -291,11 +278,10 @@ def densify_file(  # noqa: PLR0913
         pyproj.exceptions.CRSError: when crs cannot be found by pyproj
 
     """
-    _validate_densify_file_file_args(input_file_path, output_file_path)
+    _validate_densify_file_file_args(input_file_path, output_file_path, overwrite)
 
     _, output_file_ext = os.path.splitext(output_file_path)
 
-    max_segment_length = abs(max_segment_length or DEFAULT_MAX_SEGMENT_LENGTH)
     layer = _get_valid_layer_name(input_file_path, layer)
 
     with fiona.open(input_file_path, layer=layer) as src:
@@ -310,38 +296,32 @@ def densify_file(  # noqa: PLR0913
         # override crs if supplied in src_crs argument
         override_src_crs(src_crs, profile)
 
-        crs = str(profile["crs"])
-
-        if densify_in_projection and _crs_is_geographic(crs):
-            raise ValueError(
-                f"densify_in_projection can only be used with \
-projected coordinates reference systems, crs {crs} is a geographic crs"
-            )
-
-        prec = (
-            DEFAULT_PRECISION_DEGREES
-            if _crs_is_geographic(crs)
-            else DEFAULT_PRECISION_METERS
+        src_crs_str = str(profile["crs"])
+        den_config = DenseConfig(
+            CRS.from_authority(*src_crs_str.split(":")),
+            max_segment_length,
+            densify_in_projection,
         )
+
         # COORDINATE_PRECISION is only a lco (layer creation option) for OGR GeoJSON driver
         is_geojson_driver = profile["driver"] == "GeoJSON"
-        fun_kwargs: dict = {"COORDINATE_PRECISION": prec} if is_geojson_driver else {}
+        fun_kwargs: dict = (
+            {"COORDINATE_PRECISION": den_config.get_coord_precision()}
+            if is_geojson_driver
+            else {}
+        )
 
         if output_file_ext not in SINGLE_LAYER_EXTENSIONS:
             fun_kwargs["layer"] = layer
 
         with fiona.open(output_file_path, "w", **profile, **fun_kwargs) as dst:
-            transformer = _get_transformer(crs, TRANSFORM_CRS)
             for i, ft in enumerate(src):
                 try:
                     if ft.geometry.type == "GeometryCollection":
                         new_geoms = []
                         for geom in ft.geometry.geometries:
                             coordinates_t = densify_geometry_coordinates(
-                                geom.coordinates,
-                                transformer,
-                                max_segment_length,
-                                densify_in_projection,
+                                geom.coordinates, den_config
                             )
                             new_geom = fiona.Geometry(
                                 coordinates=coordinates_t, type=geom.type
@@ -352,10 +332,7 @@ projected coordinates reference systems, crs {crs} is a geographic crs"
                         )
                     else:
                         coordinates_t = densify_geometry_coordinates(
-                            ft.geometry.coordinates,
-                            transformer,
-                            max_segment_length,
-                            densify_in_projection,
+                            ft.geometry.coordinates, den_config
                         )
                         geom = fiona.Geometry(
                             coordinates=coordinates_t, type=ft.geometry.type
@@ -392,9 +369,10 @@ def check_crs_geojson_defined(
 
 
 def interpolate_src_proj(
-    a: point_type, b: point_type, max_segment_length: float
+    a: point_type, b: point_type, densify_config: DenseConfig
 ) -> list[point_type]:
     """Interpolate intermediate points between points a and b, with segment_length < max_segment_length. Only returns intermediate points."""
+
     three_dimensional_points = (
         len(a) == THREE_DIMENSIONAL and len(b) == THREE_DIMENSIONAL
     )
@@ -405,7 +383,7 @@ def interpolate_src_proj(
         b = b[:2]
 
     dist = math.sqrt((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2)  # Pythagoras
-    if dist <= max_segment_length:
+    if dist <= densify_config.max_segment_length:
         return []
     else:
         new_points = []
@@ -413,7 +391,9 @@ def interpolate_src_proj(
         (
             nr_points,
             new_max_segment_length,
-        ) = _get_intermediate_nr_points_and_segment_length(dist, max_segment_length)
+        ) = _get_intermediate_nr_points_and_segment_length(
+            dist, densify_config.max_segment_length
+        )
 
         for i in range(0, nr_points):
             p_point: Point = LineString([a, b]).interpolate(
@@ -427,7 +407,7 @@ def interpolate_src_proj(
 
 
 def interpolate_geodesic(
-    a: point_type, b: point_type, max_segment_length: float, transformer: Transformer
+    a: point_type, b: point_type, densify_config: DenseConfig
 ) -> list[point_type]:
     """geodesic interpolate intermediate points between points a and b, with segment_length < max_segment_length. Only returns intermediate points."""
 
@@ -437,17 +417,28 @@ def interpolate_geodesic(
     a_2d = tuple(a[:2])
     b_2d = tuple(b[:2])
 
-    a_t = transformer.transform(*a_2d)  # type: ignore
-    b_t = transformer.transform(*b_2d)  # type: ignore
-    g = Geod(ellps=ELLIPS)
+    transformer = densify_config.transformer
+
+    if (
+        densify_config.src_crs.is_projected
+    ):  # only transform to basegeographic crs if src_proj is projected
+        a_t = transformer.transform(*a_2d)  # type: ignore
+        b_t = transformer.transform(*b_2d)  # type: ignore
+    else:  # src_crs is geographic do not transform
+        a_t, b_t = (a_2d, b_2d)
+
+    g = densify_config.geod
+
     az12, _, dist = g.inv(*a_t, *b_t, return_back_azimuth=True)  # type: ignore
-    if dist <= max_segment_length:
+    if dist <= densify_config.max_segment_length:
         return []
     else:
         (
             nr_points,
             new_max_segment_length,
-        ) = _get_intermediate_nr_points_and_segment_length(dist, max_segment_length)
+        ) = _get_intermediate_nr_points_and_segment_length(
+            dist, densify_config.max_segment_length
+        )
         r = g.fwd_intermediate(
             *a_t,
             az12,
@@ -456,9 +447,17 @@ def interpolate_geodesic(
             return_back_azimuth=True,
         )  # type: ignore
 
-        back_transformer = Transformer.from_crs(
-            transformer.target_crs, transformer.source_crs, always_xy=True
-        )
+        def optional_back_transform(lon: float, lat: float) -> tuple[Any, Any]:
+            if densify_config.src_crs.is_projected:
+                if transformer is None:
+                    raise ValueError(
+                        "transformer cannot be None when src_crs.is_projected=True"
+                    )
+                back_transformer = Transformer.from_crs(
+                    transformer.target_crs, transformer.source_crs, always_xy=True
+                )
+                return back_transformer.transform(lon, lat)
+            return (lon, lat)
 
         if three_dimensional_points:
             # interpolate height for three_dimensional_points
@@ -469,7 +468,7 @@ def interpolate_geodesic(
             return [
                 tuple(
                     (
-                        *back_transformer.transform(lon, lat),
+                        *optional_back_transform(lon, lat),
                         round(
                             (height_a + ((i + 1) * delta_height_per_point)),
                             DEFAULT_PRECISION_METERS,
@@ -480,7 +479,7 @@ def interpolate_geodesic(
             ]
         else:
             return [
-                back_transformer.transform(lon, lat) for lon, lat in zip(r.lons, r.lats)
+                optional_back_transform(lon, lat) for lon, lat in zip(r.lons, r.lats)
             ]
 
 
@@ -515,7 +514,9 @@ def _raise_e_if_point_geom(geometry_coordinates: list[Any]) -> None:
 
 
 def _validate_densify_file_file_args(
-    input_file_path: str, output_file_path: str
+    input_file_path: str,
+    output_file_path: str,
+    overwrite: bool = False,
 ) -> None:
     _, input_file_ext = os.path.splitext(input_file_path)
     _, output_file_ext = os.path.splitext(output_file_path)
@@ -546,8 +547,10 @@ def _validate_densify_file_file_args(
             f"target directory of output_file {output_file_path} does not exist"
         )
 
-    if os.path.exists(output_file_path):
+    if os.path.exists(output_file_path) and not overwrite:
         raise ValueError(f"output_file {output_file_path} already exists")
+    elif os.path.exists(output_file_path) and overwrite:
+        os.remove(output_file_path)
 
 
 def _get_intermediate_nr_points_and_segment_length(
@@ -570,11 +573,7 @@ def _get_intermediate_nr_points_and_segment_length(
 
 
 def _add_vertices_to_line_segment(
-    linestring: list[point_type],
-    coord_index: int,
-    transformer: Transformer,
-    max_segment_length: float,
-    densify_in_projection: bool = False,
+    linestring: list[point_type], coord_index: int, densify_config: DenseConfig
 ) -> int:
     """Adds vertices to linestring in place, and returns number of vertices added to linestring.
 
@@ -592,19 +591,20 @@ def _add_vertices_to_line_segment(
     a = linestring[coord_index]
     b = linestring[coord_index + 1]
 
-    prec = _get_coord_precision(transformer)
-    if not densify_in_projection:
+    prec = densify_config.get_coord_precision()
+
+    if not densify_config.in_projection:
         p = list(
             [
                 _round_coordinates(x, prec)
-                for x in interpolate_geodesic(a, b, max_segment_length, transformer)
+                for x in interpolate_geodesic(a, b, densify_config)
             ]
         )
     else:
         p = list(
             [
                 _round_coordinates(x, prec)
-                for x in interpolate_src_proj(a, b, max_segment_length)
+                for x in interpolate_src_proj(a, b, densify_config)
             ]
         )
 
@@ -622,20 +622,13 @@ def _round_coordinates(coordinates: tuple, position_precision: int) -> tuple:
 
 
 def _add_vertices_exceeding_max_segment_length(
-    linestring: list[point_type],
-    max_segment_length: float,
-    transformer: Transformer,
-    densify_in_projection: bool,
+    linestring: list[point_type], densify_config: DenseConfig
 ) -> list[point_type]:
     added_nodes = 0
     stop = len(linestring) - 1
     for i, _ in enumerate(linestring[:stop]):
         added_nodes += _add_vertices_to_line_segment(
-            linestring,
-            i + added_nodes,
-            transformer,
-            max_segment_length,
-            densify_in_projection,
+            linestring, i + added_nodes, densify_config
         )
     return linestring
 
@@ -687,15 +680,6 @@ def _geom_type_check(geom_type: str) -> None:
 def _crs_is_geographic(crs_string: str) -> bool:
     crs = CRS.from_authority(*crs_string.split(":"))
     return crs.is_geographic
-
-
-def _get_coord_precision(transformer: Transformer) -> int:
-    if transformer.source_crs is None:
-        raise ValueError("transformer.source_crs is None")
-    coord_precision = DEFAULT_PRECISION_METERS
-    if transformer.source_crs.is_geographic:
-        coord_precision = DEFAULT_PRECISION_DEGREES
-    return coord_precision
 
 
 def _get_transformer(source_crs: str, target_crs: str) -> Transformer:

@@ -1,17 +1,12 @@
 from contextlib import nullcontext as does_not_raise
 from typing import Any, Literal, Union
-from unittest import mock
 
-import pyproj
 import pytest
 from _pytest.python_api import RaisesContext
 from geodense.lib import (
-    TRANSFORM_CRS,
     _crs_is_geographic,
     _file_is_supported_fileformat,
     _geom_type_check,
-    _get_coord_precision,
-    _get_transformer,
     get_crs_json,
 )
 
@@ -74,17 +69,6 @@ def test_crs_is_geographic(crs_string: str, expectation: bool):
 )
 def test_is_supported_fileformat(file_path, expectation):
     assert _file_is_supported_fileformat(file_path) is expectation
-
-
-@mock.patch.object(pyproj.Transformer, "source_crs", new_callable=mock.PropertyMock)
-def test_get_coord_precision_transformer_source_crs_is_none(mock_source_crs):
-    transformer = _get_transformer("EPSG:28992", TRANSFORM_CRS)
-    mock_source_crs.return_value = None
-    with pytest.raises(
-        ValueError,
-        match=r"transformer.source_crs is None",
-    ):
-        _get_coord_precision(transformer)
 
 
 # using fixtures by referencing fixture as string in @pytest.mark.parametrize

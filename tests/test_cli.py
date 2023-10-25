@@ -7,8 +7,8 @@ from unittest.mock import MagicMock, patch
 import geodense
 import pytest
 from cli_test_helpers import ArgvContext
-from geodense.lib import DEFAULT_MAX_SEGMENT_LENGTH
 from geodense.main import check_density_cmd, densify_cmd, list_formats_cmd, main
+from geodense.models import DEFAULT_MAX_SEGMENT_LENGTH
 
 USAGE_STRING = "Usage: geodense [-h] {list-formats,densify,check-density} ..."
 
