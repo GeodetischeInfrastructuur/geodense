@@ -117,7 +117,7 @@ using the geodesic (ellipsoidal great-circle) calculation for accurate CRS trans
     densify_parser = subparsers.add_parser(
         "densify",
         formatter_class=parser.formatter_class,
-        description="Densify (multi)polygon and (multi)linestring geometries along the geodesic (ellipsoidal great-circle) in ETRS89 (EPSG:4258). See the list-formats command for a list of supported file formats. File format of input_file and output_file should match. When supplying 3D coordinates, the height is linear interpolated for both geographic CRSs with ellipsoidal height and for compound CRSs with physical height.",
+        description="Densify (multi)polygon and (multi)linestring geometries along the geodesic (ellipsoidal great-circle), in base CRS (geographic) in case of projected source CRS. See the list-formats command for a list of supported file formats. File format of input_file and output_file should match. When supplying 3D coordinates, the height is linear interpolated for both geographic CRSs with ellipsoidal height and for compound CRSs with physical height.",
     )
     densify_parser.add_argument("input_file", type=str)
     densify_parser.add_argument("output_file", type=str)
@@ -164,7 +164,7 @@ using the geodesic (ellipsoidal great-circle) calculation for accurate CRS trans
     check_density_parser = subparsers.add_parser(
         "check-density",
         formatter_class=parser.formatter_class,
-        description="Check density of (multi)polygon and (multi)linestring geometries based on geodesic (ellipsoidal great-circle) distance in ETRS89 (EPSG:4258). \
+        description="Check density of (multi)polygon and (multi)linestring geometries based on geodesic (ellipsoidal great-circle) distance, in base CRS (geographic) in case of projected source CRS. \
         When result of check is OK the program will return with exit code 0, when result \
         is FAILED the program will return with exit code 1. See the list-formats command for a list of supported file formats.",
     )

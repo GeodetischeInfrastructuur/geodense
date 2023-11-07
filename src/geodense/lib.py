@@ -44,7 +44,7 @@ point_type = tuple[float, ...]
 report_type = list[tuple[list[int], float]]
 
 
-def transfrom_linestrings_in_geometry_coordinates(
+def transform_linestrings_in_geometry_coordinates(
     geometry_coordinates: list[Any],
     transform_fun: Callable[[list[point_type], DenseConfig], list[point_type]],
     densify_config: DenseConfig,
@@ -56,7 +56,7 @@ def transfrom_linestrings_in_geometry_coordinates(
         return geometry_coordinates
     else:
         return [
-            transfrom_linestrings_in_geometry_coordinates(
+            transform_linestrings_in_geometry_coordinates(
                 e, transform_fun, densify_config
             )
             for e in geometry_coordinates
@@ -81,7 +81,7 @@ def check_density_linestring(
 
         if (
             densify_config.src_crs.is_projected
-        ):  # only transform to basegeographic crs if src_proj is projected
+        ):  # only convert to basegeographic crs if src_proj is projected
             a_t = transformer.transform(*a_2d)  # type: ignore
             b_t = transformer.transform(*b_2d)  # type: ignore
         else:  # src_crs is geographic do not transform
@@ -180,7 +180,7 @@ def get_cmd_result_message(
 def densify_geometry_coordinates(
     geometry_coordinates: list[Any], densify_config: DenseConfig
 ) -> list[Any]:
-    return transfrom_linestrings_in_geometry_coordinates(
+    return transform_linestrings_in_geometry_coordinates(
         geometry_coordinates, _add_vertices_exceeding_max_segment_length, densify_config
     )
 
@@ -421,7 +421,7 @@ def interpolate_geodesic(
 
     if (
         densify_config.src_crs.is_projected
-    ):  # only transform to basegeographic crs if src_proj is projected
+    ):  # only convert to basegeographic crs if src_proj is projected
         a_t = transformer.transform(*a_2d)  # type: ignore
         b_t = transformer.transform(*b_2d)  # type: ignore
     else:  # src_crs is geographic do not transform
@@ -448,6 +448,7 @@ def interpolate_geodesic(
         )  # type: ignore
 
         def optional_back_transform(lon: float, lat: float) -> tuple[Any, Any]:
+            """technically should be named optional_back_convert, since crs->base crs is (mostly) a conversion and not a transformation"""
             if densify_config.src_crs.is_projected:
                 if transformer is None:
                     raise ValueError(
@@ -680,12 +681,6 @@ def _geom_type_check(geom_type: str) -> None:
 def _crs_is_geographic(crs_string: str) -> bool:
     crs = CRS.from_authority(*crs_string.split(":"))
     return crs.is_geographic
-
-
-def _get_transformer(source_crs: str, target_crs: str) -> Transformer:
-    source_crs_crs = CRS.from_authority(*source_crs.split(":"))
-    target_crs_crs = CRS.from_authority(*target_crs.split(":"))
-    return Transformer.from_crs(source_crs_crs, target_crs_crs, always_xy=True)
 
 
 def _get_supported_extensions() -> list[str]:

@@ -67,6 +67,7 @@ def test_density_check_geospatial_file_unsupported_file_format(
     test_dir, input_file, expectation
 ):
     input_file = os.path.join(test_dir, "data", input_file)
+
     with expectation:
         assert isinstance(check_density_file(input_file, 1000, "lijnen"), list)
 
