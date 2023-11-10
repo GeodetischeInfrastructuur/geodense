@@ -2,7 +2,7 @@
     "type": "Feature",
     "properties": {},
     "geometry": {
-        "type": "3D LineString",
+        "type": "LineString",
         "coordinates": [
             [
                 0.0,

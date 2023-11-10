@@ -1,7 +1,7 @@
 import pytest
 from geodense.lib import (
-    _add_vertices_exceeding_max_segment_length,
     _add_vertices_to_line_segment,
+    get_line_segment_densify_fun,
     interpolate_src_proj,
 )
 from geodense.models import (
@@ -35,8 +35,8 @@ def test_add_vertices_exceeding_max_segment_length():
     linestring_t = linestring
 
     c = DenseConfig(CRS.from_epsg(28992), 10, True)
-
-    _add_vertices_exceeding_max_segment_length(linestring_t, c)
+    line_segment_densify = get_line_segment_densify_fun(c)
+    line_segment_densify(linestring_t)
     assert len(linestring_t) == 5  # noqa: PLR2004
     assert linestring_t == [(0, 0), (5.0, 5.0), (10, 10), (15.0, 15.0), (20, 20)]
 
@@ -114,5 +114,6 @@ def test_interpolate_3d(linestring, in_proj, expectation):
     linestring_t = linestring[:]  # clone list with slicing
     c = DenseConfig(CRS.from_epsg(7415), 10, in_proj)
 
-    _add_vertices_exceeding_max_segment_length(linestring_t, c)
+    line_segment_densify = get_line_segment_densify_fun(c)
+    line_segment_densify(linestring_t)
     assert linestring_t == expectation

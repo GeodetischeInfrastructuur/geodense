@@ -39,6 +39,9 @@ pip install .
 
 ## Development
 
+> **TODO**: add description how to setup dev environment with conda/miniconda and libmamba solver, and install pyproj with: `conda install -c conda-forge  pyproj==3.6.0 --solver=libmamba`
+
+
 Requires Python v3.9 or higher (due to dependency on [pyproj](https://pyproj4.github.io/pyproj/stable/) v3.6.0).
 
 Install/uninstall for development:
@@ -57,7 +60,7 @@ pip install ".[dev]"
 Check test coverage (install `coverage` with `pip install coverage` ):
 
 ```sh
-coverage run --source=src/geodense -m pytest -v tests && coverage report -m
+python -m coverage run -p --source=src/geodense -m pytest -v tests && python -m  coverage report -m
 ```
 
 ## Usage CLI
