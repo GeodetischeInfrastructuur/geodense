@@ -7,6 +7,10 @@ DEFAULT_PRECISION_DEGREES = 9
 DEFAULT_PRECISION_METERS = 4
 
 
+class GeodenseError(Exception):
+    pass
+
+
 class DenseConfig:
     geod_empty_exc_message = "DenseConfig.geod is None, cannot perform geodetic calculations without pyproj.Geod object"
 
@@ -19,7 +23,7 @@ class DenseConfig:
         self.src_crs = src_crs
 
         if self.src_crs.is_geographic and in_projection:
-            raise ValueError(
+            raise GeodenseError(
                 f"densify_in_projection can only be used with \
 projected coordinates reference systems, crs {self.src_crs} is a geographic crs"
             )
@@ -32,11 +36,11 @@ projected coordinates reference systems, crs {self.src_crs} is a geographic crs"
             self.transformer = Transformer.from_crs(src_crs, base_crs, always_xy=True)
             _geod = self.src_crs.get_geod()
         else:
-            raise ValueError(
+            raise GeodenseError(
                 "unexpected crs encountered, crs is neither geographic nor projected"
             )
         if _geod is None:
-            raise ValueError(self.geod_empty_exc_message)
+            raise GeodenseError(self.geod_empty_exc_message)
         self.geod = _geod
 
         self.in_projection = in_projection
@@ -46,10 +50,10 @@ projected coordinates reference systems, crs {self.src_crs} is a geographic crs"
 
     def _get_base_crs(self: "DenseConfig") -> CRS:
         if self.src_crs is None:
-            raise ValueError("field src_proj is None")
+            raise GeodenseError("field src_proj is None")
 
         if self.src_crs.is_geographic:
-            raise ValueError("cannot get base_crs for geographic crs")
+            raise GeodenseError("cannot get base_crs for geographic crs")
 
         crs_dict = self.src_crs.to_json_dict()
         if crs_dict["type"] == "ProjectedCRS":
@@ -63,7 +67,7 @@ projected coordinates reference systems, crs {self.src_crs} is a geographic crs"
 
     def get_coord_precision(self: "DenseConfig") -> int:
         if self.src_crs is None:
-            raise ValueError("DensifyConfig.source_crs is None")
+            raise GeodenseError("DensifyConfig.source_crs is None")
         return (
             DEFAULT_PRECISION_DEGREES
             if self.src_crs.is_geographic

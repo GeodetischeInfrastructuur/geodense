@@ -1,5 +1,6 @@
+import re
 from contextlib import nullcontext as does_not_raise
-from typing import Any, Literal, Union
+from typing import Any, Union
 
 import pytest
 from _pytest.python_api import RaisesContext
@@ -7,46 +8,39 @@ from geodense.lib import (
     _crs_is_geographic,
     _file_is_supported_fileformat,
     _geom_type_check,
-    get_crs_json,
 )
+from geodense.models import GeodenseError
 
 
 @pytest.mark.parametrize(
-    ("geom_type", "expectation"),
+    ("geojson", "expectation"),
     [
-        ("LineString", does_not_raise()),
-        ("Polygon", does_not_raise()),
-        ("MultiPolygon", does_not_raise()),
-        ("MultiLineString", does_not_raise()),
+        ("linestring_feature_gj", does_not_raise()),
         (
-            "Point",
+            "point_feature_gj",
             pytest.raises(
-                ValueError,
-                match=r"Unsupported GeometryType .+, supported GeometryTypes are: .+",
+                GeodenseError,
+                match=r"input file contains only \(Multi\)Point geometries which cannot be densified",
             ),
         ),
-        (
-            "MultiPoint",
-            pytest.raises(
-                ValueError,
-                match=r"Unsupported GeometryType .+, supported GeometryTypes are: .+",
-            ),
-        ),
+        ("geometry_collection_gj", does_not_raise()),
     ],
 )
 def test_geom_type_check(
-    geom_type: Literal[
-        "LineString",
-        "Polygon",
-        "MultiPolygon",
-        "MultiLineString",
-        "Point",
-        "MultiPoint",
-    ],
-    expectation: Union[Any, RaisesContext[ValueError]],
+    geojson, expectation: Union[Any, RaisesContext[GeodenseError]], request
 ):
     with expectation:
-        assert _geom_type_check(geom_type) is None
+        gj_obj = request.getfixturevalue(geojson)
+        _geom_type_check(gj_obj)
+
+
+def test_mixed_geom_outputs_warning(geometry_collection_feature_gj, caplog):
+    geojson_obj = geometry_collection_feature_gj
+    _geom_type_check(geojson_obj)
+    my_regex = re.compile(
+        r"WARNING.*input file contains \(Multi\)Point geometries which cannot be densified"
+    )
+    assert my_regex.match(caplog.text) is not None
 
 
 @pytest.mark.parametrize(
@@ -59,30 +53,13 @@ def test_crs_is_geographic(crs_string: str, expectation: bool):
 @pytest.mark.parametrize(
     ("file_path", "expectation"),
     [
-        ("/temp/data/bar.fgb", True),
+        ("/temp/data/bar.fgb", False),
         (
             "/temp/data/foo.gpkg",
-            True,
+            False,
         ),
-        ("/temp/data/foo.fgdb", False),
+        ("/temp/data/foo.geojson", True),
     ],
 )
 def test_is_supported_fileformat(file_path, expectation):
     assert _file_is_supported_fileformat(file_path) is expectation
-
-
-# using fixtures by referencing fixture as string in @pytest.mark.parametrize
-# and calling request.getfixturevalue
-@pytest.mark.parametrize(
-    ("file_path", "expectation"),
-    [
-        ("geometry_path", None),
-        ("geometry_crs_path", "EPSG:28992"),
-        ("invalid_crs_path", None),
-        ("gemeenten_path", "EPSG:28992"),
-    ],
-)
-def test_get_crs_json(file_path, expectation, request):
-    file_path_val = request.getfixturevalue(file_path)
-    crs = get_crs_json(file_path_val)
-    assert crs == expectation

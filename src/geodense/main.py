@@ -1,98 +1,72 @@
 import argparse
+import logging
 import sys
-from typing import Optional
+from functools import wraps
+from typing import Any, Callable, Optional
 
-import pyproj
-from fiona import supported_drivers
 from rich_argparse import RichHelpFormatter
 
+from geodense import add_stderr_logger
 from geodense.lib import (
-    SUPPORTED_FILE_FORMATS,
     check_density_file,
     densify_file,
     get_cmd_result_message,
 )
-from geodense.models import DEFAULT_MAX_SEGMENT_LENGTH
+from geodense.models import DEFAULT_MAX_SEGMENT_LENGTH, GeodenseError
 
-CLI_ERROR_MESSAGE_TEMPLATE = "ERROR: {message}"
-
-
-def list_formats_cmd() -> None:
-    # check if SUPPORTED_FILE_FORMATS are in fiona.supported_drivers
-    try:
-        unsupported_formats = []
-        for key in SUPPORTED_FILE_FORMATS:
-            if key not in supported_drivers:
-                unsupported_formats.append(key)
-        if len(unsupported_formats) > 0:
-            supported_formats_string = ", ".join(unsupported_formats)
-            raise ValueError(
-                f"The following format(s) are not supported by your fiona installation: {supported_formats_string}"
-            )
-
-        column_name_length = 15  # max_length + 2 padding
-        column_ext_length = 15  # max_length + 2 padding
-
-        print(
-            f"{'Name' : <{column_name_length}} | {'Extension' : <{column_ext_length}}"
-        )
-        print(
-            f"{'-'*(column_ext_length + column_name_length + 3)}"
-        )  # +3 to account for " | " seperator
-        for format in SUPPORTED_FILE_FORMATS:
-            print(
-                f"{format : <{column_name_length}} | {' ,'.join(SUPPORTED_FILE_FORMATS[format]) : <{column_ext_length}}"
-            )
-        sys.exit(0)
-    except ValueError as e:
-        exception_message = str(e)
-        error_message = CLI_ERROR_MESSAGE_TEMPLATE.format(message=exception_message)
-        print(error_message, file=sys.stderr)
-        sys.exit(1)
+logger = logging.getLogger("geodense")
 
 
+def cli_exception_handler(f: Callable) -> Callable:
+    @wraps(f)
+    def decorated(*args, **kwargs) -> Any:  # noqa: ANN002, ANN003, ANN401
+        try:
+            return f(*args, **kwargs)
+        except GeodenseError as e:
+            logger.error(e)
+            sys.exit(1)
+        except (
+            Exception
+        ) as e:  # unexpected exception, show stacktrace by calling logger.exception
+            logger.exception(e)
+            sys.exit(1)
+
+    return decorated
+
+
+@cli_exception_handler
 def densify_cmd(  # noqa: PLR0913
     input_file: str,
     output_file: str,
-    max_segment_length: Optional[float] = None,
-    layer: Optional[str] = None,
-    in_projection: bool = False,
     overwrite: bool = False,
+    max_segment_length: Optional[float] = None,
+    in_projection: bool = False,
     src_crs: Optional[str] = None,
 ) -> None:
-    try:
-        densify_file(
-            input_file,
-            output_file,
-            layer,
-            max_segment_length,
-            in_projection,
-            overwrite,
-            src_crs,
-        )
-    except (ValueError, pyproj.exceptions.CRSError) as e:
-        print(CLI_ERROR_MESSAGE_TEMPLATE.format(message=str(e)), file=sys.stderr)
-        sys.exit(1)
+    densify_file(
+        input_file,
+        output_file,
+        overwrite,
+        max_segment_length,
+        in_projection,
+        src_crs,
+    )
 
 
+@cli_exception_handler
 def check_density_cmd(
     input_file: str,
     max_segment_length: float,
-    layer: str,
     src_crs: Optional[str] = None,
 ) -> None:
-    try:
-        result = check_density_file(input_file, max_segment_length, layer, src_crs)
-        cmd_output = get_cmd_result_message(input_file, result, max_segment_length)
+    result = check_density_file(input_file, max_segment_length, src_crs)
+    cmd_output = get_cmd_result_message(input_file, result, max_segment_length)
 
-        if len(result) == 0:
-            print(cmd_output)
-            sys.exit(0)
-        else:
-            print(cmd_output)
-            sys.exit(1)
-    except (ValueError, pyproj.exceptions.CRSError) as e:
-        print(CLI_ERROR_MESSAGE_TEMPLATE.format(message=str(e)), file=sys.stderr)
+    if len(result) == 0:
+        print(cmd_output)
+        sys.exit(0)
+    else:
+        print(cmd_output)
         sys.exit(1)
 
 
@@ -107,17 +81,10 @@ using the geodesic (ellipsoidal great-circle) calculation for accurate CRS trans
 
     subparsers = parser.add_subparsers()
 
-    list_formats_parser = subparsers.add_parser(
-        "list-formats",
-        formatter_class=parser.formatter_class,
-        description="List supported file formats for reading and writing. File format is determined based on the extension of the input_file and output_file.",
-    )
-    list_formats_parser.set_defaults(func=list_formats_cmd)
-
     densify_parser = subparsers.add_parser(
         "densify",
         formatter_class=parser.formatter_class,
-        description="Densify (multi)polygon and (multi)linestring geometries along the geodesic (ellipsoidal great-circle), in base CRS (geographic) in case of projected source CRS. See the list-formats command for a list of supported file formats. File format of input_file and output_file should match. When supplying 3D coordinates, the height is linear interpolated for both geographic CRSs with ellipsoidal height and for compound CRSs with physical height.",
+        description="Densify (multi)polygon and (multi)linestring geometries along the geodesic (ellipsoidal great-circle), in base CRS (geographic) in case of projected source CRS.Supports GeoJSON as input file format. When supplying 3D coordinates, the height is linear interpolated for both geographic CRSs with ellipsoidal height and for compound CRSs with physical height.",
     )
     densify_parser.add_argument("input_file", type=str)
     densify_parser.add_argument("output_file", type=str)
@@ -129,13 +96,7 @@ using the geodesic (ellipsoidal great-circle) calculation for accurate CRS trans
         default=DEFAULT_MAX_SEGMENT_LENGTH,
         help=f"max allowed segment length in meters; default {DEFAULT_MAX_SEGMENT_LENGTH} meter",
     )
-    densify_parser.add_argument(
-        "--layer",
-        "-l",
-        type=str,
-        help="layer to use in multi-layer geospatial input files",
-        default=None,
-    )
+
     densify_parser.add_argument(
         "--in-projection",
         "-p",
@@ -149,6 +110,10 @@ using the geodesic (ellipsoidal great-circle) calculation for accurate CRS trans
         action="store_true",
         default=False,
         help="overwrite output file if exists",
+    )
+
+    densify_parser.add_argument(
+        "-v", "--verbose", action="store_true", default=False, help="verbose output"
     )
 
     densify_parser.add_argument(
@@ -166,7 +131,7 @@ using the geodesic (ellipsoidal great-circle) calculation for accurate CRS trans
         formatter_class=parser.formatter_class,
         description="Check density of (multi)polygon and (multi)linestring geometries based on geodesic (ellipsoidal great-circle) distance, in base CRS (geographic) in case of projected source CRS. \
         When result of check is OK the program will return with exit code 0, when result \
-        is FAILED the program will return with exit code 1. See the list-formats command for a list of supported file formats.",
+        is FAILED the program will return with exit code 1.",
     )
     check_density_parser.add_argument("input_file", type=str)
     check_density_parser.add_argument(
@@ -177,18 +142,15 @@ using the geodesic (ellipsoidal great-circle) calculation for accurate CRS trans
         help=f"max allowed segment length in meters; default {DEFAULT_MAX_SEGMENT_LENGTH} meter",
     )
     check_density_parser.add_argument(
-        "--layer",
-        "-l",
-        type=str,
-        help="layer to use in multi-layer geospatial input files",
-        default=None,
-    )
-    check_density_parser.add_argument(
         "--src-crs",
         "-s",
         type=str,
         help="override source CRS, if not specified then the CRS found in the input layer will be used",
         default=None,
+    )
+
+    check_density_parser.add_argument(
+        "-v", "--verbose", action="store_true", default=False, help="verbose output"
     )
     check_density_parser.set_defaults(func=check_density_cmd)
 
@@ -196,11 +158,13 @@ using the geodesic (ellipsoidal great-circle) calculation for accurate CRS trans
     args = parser.parse_args()
 
     try:
+        add_stderr_logger(args.verbose)
+        del args.verbose
         func = args.func
         del args.func
         func(**vars(args))
-    except AttributeError:
-        parser.print_help()
+    except AttributeError as _:
+        parser.print_help(file=sys.stderr)
         sys.exit(0)
 
 

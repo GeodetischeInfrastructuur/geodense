@@ -19,11 +19,12 @@
             "module": "geodense.main",
             "args": [
                 "densify",
-                "${workspaceFolder}/tests/data/linestrings.json",
-                "${workspaceFolder}/out-data/out.json",
-                "--max-segment-length",
-                "5000",
-                "-o"
+                "-",
+                "${workspaceFolder}/out-data/feature.json",
+                "-o",
+                "<",
+                "${workspaceFolder}/tests/data/multipolygon.json",
+                "-v"
             ],
             "justMyCode": false
         },
