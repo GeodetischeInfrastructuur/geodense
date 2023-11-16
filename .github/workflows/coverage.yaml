@@ -8,12 +8,12 @@ on:
 jobs:
   generate_coverage:
     name: Generate Coverage Report
-    
+
     permissions:
       contents: write
       pages: write
       id-token: write
-      
+
     runs-on: ubuntu-latest
 
     steps:
@@ -22,11 +22,11 @@ jobs:
         uses: s-weigand/setup-conda@v1
         with:
           update-conda: true
-          python-version: 3.9
+          python-version: 3.11
           conda-channels: anaconda, conda-forge
 
       - name: Conda install dependencies
-        run: conda install fiona==1.9.4
+        run: conda install -c conda-forge pyproj==3.6.0
 
       - name: Install dependencies
         run: |
