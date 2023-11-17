@@ -1,6 +1,7 @@
 from typing import Optional
 
-from pyproj import CRS, Transformer
+from pyproj import CRS as ProjCrs  # noqa: N811
+from pyproj import Transformer
 
 DEFAULT_MAX_SEGMENT_LENGTH = 200
 DEFAULT_PRECISION_DEGREES = 9
@@ -16,7 +17,7 @@ class DenseConfig:
 
     def __init__(
         self: "DenseConfig",
-        src_crs: CRS,
+        src_crs: ProjCrs,
         max_segment_length: Optional[float] = None,
         in_projection: bool = False,
     ) -> None:
@@ -48,7 +49,7 @@ projected coordinates reference systems, crs {self.src_crs} is a geographic crs"
             max_segment_length or DEFAULT_MAX_SEGMENT_LENGTH
         )  # when max_segment_length == None -> DEFAULT_MAX_SEGMENT_LENGTH
 
-    def _get_base_crs(self: "DenseConfig") -> CRS:
+    def _get_base_crs(self: "DenseConfig") -> ProjCrs:
         if self.src_crs is None:
             raise GeodenseError("field src_proj is None")
 
@@ -63,7 +64,7 @@ projected coordinates reference systems, crs {self.src_crs} is a geographic crs"
                 x for x in crs_dict["components"] if x["type"] == "ProjectedCRS"
             )
             base_crs_id = projected_crs["base_crs"]["id"]
-        return CRS.from_authority(base_crs_id["authority"], base_crs_id["code"])
+        return ProjCrs.from_authority(base_crs_id["authority"], base_crs_id["code"])
 
     def get_coord_precision(self: "DenseConfig") -> int:
         if self.src_crs is None:

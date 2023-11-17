@@ -1,12 +1,10 @@
-import itertools
 import json
 import logging
 import math
 import os
-import pathlib
 import sys
 from collections.abc import Iterable, Sequence
-from typing import Any, Callable, Optional, TextIO, TypeAlias, TypeVar, Union, cast
+from typing import Any, Callable, Optional, TextIO, TypeVar, cast
 
 from geojson_pydantic import (
     Feature,
@@ -17,22 +15,17 @@ from geojson_pydantic import (
     Polygon,
 )
 from geojson_pydantic.geometries import Geometry
+from pydantic import BaseModel
 from pyproj import CRS, Transformer
 from shapely import LineString, Point
 
 from geodense.geojson import CrsFeatureCollection
 from geodense.models import DEFAULT_PRECISION_METERS, DenseConfig, GeodenseError
-
-GeojsonGeomNoGeomCollection: TypeAlias = (
-    Point | MultiPoint | LineString | MultiLineString | Polygon | MultiPolygon
-)
-
-GeojsonObject: TypeAlias = Union[
-    Geometry, GeometryCollection, Feature, CrsFeatureCollection
-]
+from geodense.types import GeojsonGeomNoGeomCollection, GeojsonObject
 
 logger = logging.getLogger("geodense")
-
+TWO_DIMENSIONAL = 2
+THREE_DIMENSIONAL = 3
 
 T = TypeVar("T")
 
@@ -114,7 +107,7 @@ def check_density_linestring(
 
 
 def check_density_geometry_coordinates(
-    geometry_coordinates: list[Any],
+    geometry_coordinates: list[Any] | tuple[Any, ...],
     densify_config: DenseConfig,
     result: list,
     indices: Optional[list[int]] = None,
@@ -125,8 +118,9 @@ def check_density_geometry_coordinates(
     if _is_linestring_geom(
         geometry_coordinates
     ):  # check if at linestring level in coordinates array - list[typle[float,float]]
+        linestring_coords = cast(list[tuple[float, ...]], geometry_coordinates)
         linestring_report = check_density_linestring(
-            geometry_coordinates, densify_config, indices
+            linestring_coords, densify_config, indices
         )
         result.extend(linestring_report)
     else:
@@ -241,7 +235,8 @@ def densify_file(  # noqa: PLR0913
         with open(
             output_file_path, "w"
         ) if output_file_path != "-" else sys.stdout as out_f:
-            out_f.write(geojson_obj.model_dump_json(indent=1))
+            geojson_obj_model: BaseModel = cast(BaseModel, geojson_obj)
+            out_f.write(geojson_obj_model.model_dump_json(indent=1))
 
 
 def get_geojson_obj(src: TextIO) -> GeojsonObject:
@@ -255,7 +250,7 @@ def get_geojson_obj(src: TextIO) -> GeojsonObject:
         "Polygon": Polygon,
         "MultiPolygon": MultiPolygon,
         "LineString": LineString,
-        "MultiLineString": MultiPolygon,
+        "MultiLineString": MultiLineString,
     }
     try:  # TODO: add check for missing type field and appropriate error
         geojson_type = src_json["type"]
@@ -310,7 +305,6 @@ def apply_function_on_geojson_geometries(  # noqa: C901
                 GeojsonGeomNoGeomCollection, g
             )  # geojson prohibits nested geometrycollections - maybe throw exception if this occurs
             callback(g_no_gc, result, n_indices)
-
     return result
 
 
@@ -479,7 +473,7 @@ def interpolate_geodesic(
             ]
 
 
-def _is_linestring_geom(geometry_coordinates: list[Any]) -> bool:
+def _is_linestring_geom(geometry_coordinates: list[Any] | tuple[Any, ...]) -> bool:
     """Check if coordinates are of linestring geometry type.
 
         - Fiona linestring coordinates are of type: list[tuple[float,float,...]])
@@ -502,7 +496,7 @@ def _is_linestring_geom(geometry_coordinates: list[Any]) -> bool:
     return False
 
 
-def _raise_e_if_point_geom(geometry_coordinates: list[Any]) -> None:
+def _raise_e_if_point_geom(geometry_coordinates: list[Any] | tuple[Any, ...]) -> None:
     if all(isinstance(x, float) for x in geometry_coordinates):
         raise GeodenseError(
             "received point geometry coordinates, instead of (multi)linestring"
@@ -656,10 +650,9 @@ def _geom_has_3d_coords(
     def _linestring_has_3d_coords(linestring: list[point_type]) -> list[bool]:
         return [len(x) == THREE_DIMENSIONAL for x in linestring]
 
+    coords = cast(list[Any], geometry.coordinates)
     result.append(
-        transform_linestrings_in_geometry_coordinates(
-            geometry.coordinates, _linestring_has_3d_coords
-        )
+        transform_linestrings_in_geometry_coordinates(coords, _linestring_has_3d_coords)
     )
 
 
@@ -744,14 +737,3 @@ def _geom_type_check(geojson_obj: GeojsonObject) -> None:
     else:
         # situation: no geoms point -> ok
         pass
-
-
-def _crs_is_geographic(crs_string: str) -> bool:
-    crs = CRS.from_authority(*crs_string.split(":"))
-    return crs.is_geographic
-
-
-def _file_is_supported_fileformat(filepath: str) -> bool:
-    ext = pathlib.Path(filepath).suffix
-    # flatten list of get_driver_by_file_extensionlists
-    return ext in list(itertools.chain.from_iterable(SUPPORTED_FILE_FORMATS.values()))
