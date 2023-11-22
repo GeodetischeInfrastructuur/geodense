@@ -1,6 +1,6 @@
 import re
 from contextlib import nullcontext as does_not_raise
-from typing import Any, Union
+from typing import Any
 
 import pytest
 from _pytest.python_api import RaisesContext
@@ -25,7 +25,7 @@ from geodense.models import GeodenseError
     ],
 )
 def test_geom_type_check(
-    geojson, expectation: Union[Any, RaisesContext[GeodenseError]], request
+    geojson, expectation: Any | RaisesContext[GeodenseError], request
 ):
     with expectation:
         gj_obj = request.getfixturevalue(geojson)

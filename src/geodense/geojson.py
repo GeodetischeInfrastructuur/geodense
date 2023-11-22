@@ -1,5 +1,5 @@
 import re
-from typing import Literal, Optional
+from typing import Literal
 
 from geojson_pydantic import FeatureCollection
 from pydantic import BaseModel, Field
@@ -19,7 +19,7 @@ class GeoJsonCrs(BaseModel):
 
 
 class CrsFeatureCollection(FeatureCollection):
-    crs: Optional[GeoJsonCrs] = None
+    crs: GeoJsonCrs | None = None
 
     def set_crs_auth_code(self: "CrsFeatureCollection", crs_auth_code: str) -> None:
         crs_auth, crs_identifier = crs_auth_code.split(":")
