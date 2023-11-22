@@ -1,7 +1,12 @@
+import contextlib
 import logging
+from importlib.metadata import PackageNotFoundError, version
 from logging import Formatter, NullHandler, StreamHandler
 
 logging.getLogger(__name__).addHandler(NullHandler())
+
+with contextlib.suppress(PackageNotFoundError):
+    __version__ = version("geodense")
 
 
 def get_log_handler(verbose: bool) -> logging.StreamHandler:
