@@ -42,7 +42,7 @@ pip install .
 > **TODO**: add description how to setup dev environment with conda/miniconda and libmamba solver, and install pyproj with: `conda install -c conda-forge  pyproj==3.6.0 --solver=libmamba`
 
 
-Requires Python v3.9 or higher (due to dependency on [pyproj](https://pyproj4.github.io/pyproj/stable/) v3.6.0).
+Requires Python v3.11 or higher.
 
 Install/uninstall for development:
 

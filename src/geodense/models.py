@@ -1,5 +1,3 @@
-from typing import Optional
-
 from pyproj import CRS as ProjCrs  # noqa: N811
 from pyproj import Transformer
 
@@ -18,7 +16,7 @@ class DenseConfig:
     def __init__(
         self: "DenseConfig",
         src_crs: ProjCrs,
-        max_segment_length: Optional[float] = None,
+        max_segment_length: float | None = None,
         in_projection: bool = False,
     ) -> None:
         self.src_crs = src_crs

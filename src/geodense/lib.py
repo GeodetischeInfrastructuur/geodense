@@ -3,21 +3,24 @@ import logging
 import math
 import os
 import sys
-from collections.abc import Iterable, Sequence
-from typing import Any, Callable, Optional, TextIO, TypeVar, cast
+from collections.abc import Callable, Iterable, Sequence
+from typing import Any, TextIO, TypeVar, cast
 
 from geojson_pydantic import (
     Feature,
     GeometryCollection,
+    LineString,
     MultiLineString,
     MultiPoint,
     MultiPolygon,
+    Point,
     Polygon,
 )
 from geojson_pydantic.geometries import Geometry
 from pydantic import BaseModel
 from pyproj import CRS, Transformer
-from shapely import LineString, Point
+from shapely import LineString as ShpLineString
+from shapely import Point as ShpPoint
 
 from geodense.geojson import CrsFeatureCollection
 from geodense.models import DEFAULT_PRECISION_METERS, DenseConfig, GeodenseError
@@ -110,7 +113,7 @@ def check_density_geometry_coordinates(
     geometry_coordinates: list[Any] | tuple[Any, ...],
     densify_config: DenseConfig,
     result: list,
-    indices: Optional[list[int]] = None,
+    indices: list[int] | None = None,
 ) -> None:
     if indices is None:
         indices = []
@@ -171,7 +174,7 @@ def get_density_check_fun(
 def check_density_file(
     input_file_path: str,
     max_segment_length: float,
-    src_crs: Optional[str] = None,
+    src_crs: str | None = None,
 ) -> report_type:
     # TODO: check if densify_in_projection missing in function args
     _validate_file_args(input_file_path)
@@ -196,9 +199,9 @@ def densify_file(  # noqa: PLR0913
     input_file_path: str,
     output_file_path: str,
     overwrite: bool = False,
-    max_segment_length: Optional[float] = None,
+    max_segment_length: float | None = None,
     densify_in_projection: bool = False,
-    src_crs: Optional[str] = None,
+    src_crs: str | None = None,
 ) -> None:
     """_summary_
 
@@ -308,7 +311,7 @@ def apply_function_on_geojson_geometries(  # noqa: C901
     return result
 
 
-def override_src_crs(src_crs: Optional[str], profile: dict) -> None:
+def override_src_crs(src_crs: str | None, profile: dict) -> None:
     if src_crs:
         crs_obj = CRS.from_authority(*src_crs.split(":"))
         profile["crs"] = crs_obj
@@ -318,7 +321,7 @@ def override_src_crs(src_crs: Optional[str], profile: dict) -> None:
 def get_crs_geojson(
     geojson_object: GeojsonObject,
     input_file_path: str,
-    src_crs: Optional[str],
+    src_crs: str | None,
     has_3d_coords: bool,
 ) -> str:
     result: str | None = None
@@ -344,7 +347,7 @@ def get_crs_geojson(
 
 def flatten(container: list | tuple) -> Iterable:
     for i in container:
-        if isinstance(i, (list, tuple)):
+        if isinstance(i, list | tuple):
             yield from flatten(i)
         else:
             yield i
@@ -378,7 +381,7 @@ def interpolate_src_proj(
         )
 
         for i in range(0, nr_points):
-            p_point: Point = LineString([a, b]).interpolate(
+            p_point: ShpPoint = ShpLineString([a, b]).interpolate(
                 new_max_segment_length * (i + 1)
             )  # type: ignore
             p = tuple(p_point.coords[0])
@@ -465,11 +468,12 @@ def interpolate_geodesic(
                         ),
                     )
                 )
-                for i, (lon, lat) in enumerate(zip(r.lons, r.lats))
+                for i, (lon, lat) in enumerate(zip(r.lons, r.lats, strict=True))
             ]
         else:
             return [
-                optional_back_transform(lon, lat) for lon, lat in zip(r.lons, r.lats)
+                optional_back_transform(lon, lat)
+                for lon, lat in zip(r.lons, r.lats, strict=True)
             ]
 
 
@@ -489,7 +493,7 @@ def _is_linestring_geom(geometry_coordinates: list[Any] | tuple[Any, ...]) -> bo
         len(geometry_coordinates) > 0
         and isinstance(geometry_coordinates[0], Sequence)
         and all(
-            isinstance(x, (float, int)) for x in geometry_coordinates[0]
+            isinstance(x, float | int) for x in geometry_coordinates[0]
         )  # also test for int just in case...
     ):
         return True
@@ -505,7 +509,7 @@ def _raise_e_if_point_geom(geometry_coordinates: list[Any] | tuple[Any, ...]) ->
 
 def _validate_file_args(
     input_file_path: str,
-    output_file_path: Optional[str] = None,
+    output_file_path: str | None = None,
     overwrite: bool = False,
 ) -> None:
     _, input_file_ext = os.path.splitext(input_file_path)
@@ -698,9 +702,7 @@ def densify_geojson_object(geojson_obj: GeojsonObject, dc: DenseConfig) -> None:
     _ = apply_function_on_geojson_geometries(geojson_obj, geom_densify_fun)
 
 
-def has_3d_coordinates(
-    geojson_obj: GeojsonObject, silent: Optional[bool] = False
-) -> bool:
+def has_3d_coordinates(geojson_obj: GeojsonObject, silent: bool | None = False) -> bool:
     has_3d_coords = apply_function_on_geojson_geometries(
         geojson_obj, _geom_has_3d_coords  # type: ignore
     )

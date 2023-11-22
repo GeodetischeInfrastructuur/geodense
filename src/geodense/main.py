@@ -1,8 +1,9 @@
 import argparse
 import logging
 import sys
+from collections.abc import Callable
 from functools import wraps
-from typing import Any, Callable, Optional
+from typing import Any
 
 from rich_argparse import RichHelpFormatter
 
@@ -39,9 +40,9 @@ def densify_cmd(  # noqa: PLR0913
     input_file: str,
     output_file: str,
     overwrite: bool = False,
-    max_segment_length: Optional[float] = None,
+    max_segment_length: float | None = None,
     in_projection: bool = False,
-    src_crs: Optional[str] = None,
+    src_crs: str | None = None,
 ) -> None:
     densify_file(
         input_file,
@@ -57,7 +58,7 @@ def densify_cmd(  # noqa: PLR0913
 def check_density_cmd(
     input_file: str,
     max_segment_length: float,
-    src_crs: Optional[str] = None,
+    src_crs: str | None = None,
 ) -> None:
     result = check_density_file(input_file, max_segment_length, src_crs)
     cmd_output = get_cmd_result_message(input_file, result, max_segment_length)
