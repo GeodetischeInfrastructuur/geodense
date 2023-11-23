@@ -4,7 +4,7 @@
 
 Python library and CLI tool to **check density** and **densify** geometries using the geodesic (ellipsoidal great-circle) calculation for accurate CRS transformations.
 
-Implementation based on [*Eenduidige transformatie van grenzen tussen ETRS89 en RD*](https://geoforum.nl/uploads/default/original/2X/c/c0795baa683bf3845c866ae4c576a880455be02a.pdf)
+Implementation based on [*Eenduidige transformatie van grenzen tussen ETRS89 en RD*](https://gnss-data.kadaster.nl/misc/docs/langelijnenadvies.pdf)
 
 Requires Python v3.11 or higher.
 
