@@ -1,6 +1,6 @@
 [project]
 name = "geodense"
-description = "Python library and CLI tool to check density and densify geometries using the geodesic (ellipsoidal great-circle) calculation for accurate CRS transformations"
+description = "Python library and CLI tool to check density and densify (GeoJSON) geometries using the geodesic (ellipsoidal great-circle) calculation for accurate CRS transformations"
 keywords = [
     "coordinate reference system",
     "CRS",
