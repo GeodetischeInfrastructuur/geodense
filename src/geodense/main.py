@@ -7,7 +7,7 @@ from typing import Any
 
 from rich_argparse import RichHelpFormatter
 
-from geodense import add_stderr_logger
+from geodense import __version__, add_stderr_logger
 from geodense.lib import (
     check_density_file,
     densify_file,
@@ -74,12 +74,11 @@ def check_density_cmd(
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="geodense",
-        description="Check density of, and densify geometries \
-using the geodesic (ellipsoidal great-circle) calculation for accurate CRS transformations",
+        description="Check density and densify geometries using the geodesic (ellipsoidal great-circle) calculation for accurate CRS transformations",
         epilog="Created by https://www.nsgi.nl/",
         formatter_class=RichHelpFormatter,
     )
-
+    parser.add_argument("-v", "--version", action="version", version=__version__)
     subparsers = parser.add_subparsers()
 
     densify_parser = subparsers.add_parser(
@@ -166,7 +165,7 @@ using the geodesic (ellipsoidal great-circle) calculation for accurate CRS trans
         func(**vars(args))
     except AttributeError as _:
         parser.print_help(file=sys.stderr)
-        sys.exit(0)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
