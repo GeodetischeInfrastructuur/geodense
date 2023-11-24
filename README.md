@@ -2,66 +2,16 @@
 
 [![Endpoint Badge](https://img.shields.io/endpoint?url=https%3A%2F%2Fgeodetischeinfrastructuur.github.io%2Fgeodense%2Fbadge.json&style=flat-square&logo=pytest&logoColor=white)](https://geodetischeinfrastructuur.github.io/geodense/)
 
-Python library and CLI tool to **check density** and **densify** linestring and polygon geometries using the geodesic (ellipsoidal great-circle) calculation.
+Python library and CLI tool to **check density** and **densify** geometries using the geodesic (ellipsoidal great-circle) calculation for accurate CRS transformations.
 
 Implementation based on [*Eenduidige transformatie van grenzen tussen ETRS89 en RD*](https://geoforum.nl/uploads/default/original/2X/c/c0795baa683bf3845c866ae4c576a880455be02a.pdf)
 
-See the following flowchart for a highlevel schematic overview of the `densify` functionality of `geodense`:
-
-```mermaid
-flowchart
-    input([fa:fa-database input data]) --> p_1[get input-crs]
-    p_1 --> d_1{input-crs<br>type and<br>densification method}
-    d_1 -->|geographic and linear| output_error([fa:fa-exclamation-triangle error: cannot do linear densification<br> on data in a geographic crs])
-    d_1 -->|geographic and geodesic| p_3
-    d_1 -->|projected and linear| p_4[linear densify in input-crs]
-    d_1 -->|projected and geodesic| p_2    
-    p_4-->d_4
-    p_3["geodesic densify with<br>ellipse of input-crs or base-geographic-crs"]
-    p_2[convert to LatLon in<br>base-geographic-crs<br> of input-crs]
-    p_2 --> p_3
-    p_3-->d_4{input-crs<br>type and<br>densification method}
-    d_4 -->|projected and geodesic| p_5[convert back to input-crs]
-    p_5 -->output
-    d_4 -->|geographic and geodesic| output([fa:fa-database output data])
-    d_4 -->|projected and linear| output
-    style output_error stroke: red,stroke-width:2px
-    style output stroke: green,stroke-width:2px
-```
-
-## Installation
-
-To install from source check out this repository and run from the root:
-
-```sh
-pip install .
-```
-
-## Development
-
-> **TODO**: add description how to setup dev environment with conda/miniconda and libmamba solver, and install pyproj with: `conda install -c conda-forge  pyproj==3.6.0 --solver=libmamba`
-
-
 Requires Python v3.11 or higher.
 
-Install/uninstall for development:
+Depends on: 
 
-```sh
-pip install -e .
-pip uninstall geodense
-```
-
-Install dev dependencies with:
-
-```sh
-pip install ".[dev]"
-```
-
-Check test coverage (install `coverage` with `pip install coverage` ):
-
-```sh
-python -m coverage run -p --source=src/geodense -m pytest -v tests && python -m  coverage report -m
-```
+- `pyproj ~= 3.6.0` -> [requires PROJ 9+](https://pyproj4.github.io/pyproj/stable/installation.html#installing-from-source)
+- `shapely ~= 2.0.2` -> [requires GEOS >= 3.5](https://shapely.readthedocs.io/en/stable/index.html#requirements)
 
 ## Usage CLI
 
@@ -70,16 +20,45 @@ Use either `geodense` or the short `gden` alias:
 ```txt
 $ geodense --help
 
-Usage: geodense [-h] {list-formats,densify,check-density} ...
+Usage: geodense [-h] [-v] {densify,check-density} ...
 
-Check density of, and densify geometries using the geodesic (ellipsoidal great-circle)
-calculation for accurate CRS transformations
+Check density of, and densify geometries using the geodesic (ellipsoidal great-circle) calculation for accurate CRS transformations
 
 Commands:
-  {list-formats,densify,check-density}
+  {densify,check-density}
 
 Options:
   -h, --help            show this help message and exit
+  -v, --version         show program's version number and exit
 
 Created by https://www.nsgi.nl/
+```
+
+## Usage Docs
+
+See [`DOCS.md`](https://github.com/GeodetischeInfrastructuur/geodense/blob/main/DOCS.md) for usage docs; for now only containing flow-charts of the `densify` and `check-densify` subcommands.
+
+## Development
+
+> **TODO**: add description how to setup dev environment with conda/miniconda and libmamba solver, and install pyproj with: `conda install -c conda-forge  pyproj==3.6.0 --solver=libmamba`
+
+Install/uninstall geodense for development, including dev dependencies (run from root of repository):
+
+```sh
+pip install -e ".[dev]"
+pip uninstall geodense
+```
+
+### Tests
+
+Run tests:
+
+```sh
+python3 -m pytest tests/
+```
+
+Check test coverage:
+
+```sh
+python3 -m coverage run -p --source=src/geodense -m pytest -v tests && python3 -m coverage report
 ```

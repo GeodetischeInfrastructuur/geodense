@@ -9,7 +9,7 @@ from cli_test_helpers import ArgvContext
 from geodense.main import check_density_cmd, main
 from geodense.models import DEFAULT_MAX_SEGMENT_LENGTH, GeodenseError
 
-USAGE_STRING = "Usage: geodense [-h] {densify,check-density} ..."
+USAGE_REGEX = r"^Usage: geodense (\[.+\])+ \{.*?\}"
 
 
 @patch("geodense.main.densify_cmd")
@@ -138,13 +138,12 @@ def test_cli_shows_help_text_stderr_invoked_no_args(capsys):
     with pytest.raises(SystemExit), ArgvContext("geodense"):
         main()
     _, err = capsys.readouterr()
-    assert err.startswith(USAGE_STRING)
-    assert "show this help message and exit" in err
+    assert re.match(USAGE_REGEX, err)
 
 
 def test_cli_shows_help_text_invoked_help(capsys):
     with pytest.raises(SystemExit), ArgvContext("geodense", "--help"):
         main()
     out, _ = capsys.readouterr()
-    assert out.startswith(USAGE_STRING)
+    assert re.match(USAGE_REGEX, out)
     assert "show this help message and exit" in out
