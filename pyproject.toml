@@ -2,12 +2,12 @@
 name = "geodense"
 description = "Python library and CLI tool to check density and densify geometries using the geodesic (ellipsoidal great-circle) calculation for accurate CRS transformations"
 keywords = [
-    "geojson",
-    "geodesic",
-    "densify",
-    "great-circle",
-    "CRS",
     "coordinate reference system",
+    "CRS",
+    "densify",
+    "geodesic",
+    "geojson",
+    "great-circle",
     "NSGI",
 ]
 license = { text = "MIT" }
@@ -32,12 +32,14 @@ repository = "https://github.com/GeodetischeInfrastructuur/geodense"
 [project.optional-dependencies]
 dev = [
     "black == 23.9.1",
+    "build == 1.0.3",
     "cli-test-helpers == 3.4.0",
     "coverage == 7.3.1",
     "mypy == 1.5.1",
     "pytest == 7.4.2",
     "pytest-env == 1.0.1",
     "ruff == 0.0.291",
+    "twine == 4.0.2",
 ]
 
 
@@ -107,11 +109,13 @@ unfixable = []
 
 # Exclude a variety of commonly ignored directories.
 exclude = [
+    "__pypackages__",
+    "_build",
     ".bzr",
     ".direnv",
     ".eggs",
-    ".git",
     ".git-rewrite",
+    ".git",
     ".hg",
     ".mypy_cache",
     ".nox",
@@ -121,8 +125,6 @@ exclude = [
     ".svn",
     ".tox",
     ".venv",
-    "__pypackages__",
-    "_build",
     "buck-out",
     "build",
     "dist",

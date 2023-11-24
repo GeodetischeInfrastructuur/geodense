@@ -62,3 +62,45 @@ Check test coverage:
 ```sh
 python3 -m coverage run -p --source=src/geodense -m pytest -v tests && python3 -m coverage report
 ```
+
+
+### Create release
+
+Creating a release requires the `build` and `twine` packages, which are part of this package's `dev` dependencies. To create a release follow these steps:
+
+
+1. To release a new version create a new git tag and push the new tag with:
+
+```sh
+git tag -a x.x.x -m "tagging x.x.x release"
+git push --tags
+```
+
+2. Create a new build with:
+
+```sh
+rm -rf dist/* # clean dist folder before build
+python -m build
+```
+
+3. Check wheel contains expected files:
+
+```sh
+unzip dist/geodense-0.0.1a3-py3-none-any.whl -d geodense-whl
+tree geodense-whl
+rm -rf geodense-whl
+```
+
+4. Check whether package description will render properly on PyPI:
+
+```sh
+twine check dist/*
+```
+
+5. Upload release to pypi:
+
+```sh
+twine upload -r testpypi dist/*
+```
+
+> **Note:** requires [`~/.pypirc`](https://packaging.python.org/en/latest/specifications/pypirc/) file with API token (when 2FA is enabled on PyPi).
