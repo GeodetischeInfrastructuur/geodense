@@ -235,6 +235,8 @@ def densify_file(  # noqa: PLR0913
             densify_in_projection,
         )
         densify_geojson_object(geojson_obj, config)
+        if src_crs is not None and isinstance(geojson_obj, CrsFeatureCollection):
+            geojson_obj.set_crs_auth_code(src_crs)
         with open(
             output_file_path, "w"
         ) if output_file_path != "-" else sys.stdout as out_f:
