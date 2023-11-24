@@ -1,7 +1,9 @@
+import json
 import os
 import re
 import tempfile
 from contextlib import nullcontext as does_not_raise
+from contextlib import suppress
 
 import pyproj
 import pytest
@@ -219,6 +221,35 @@ def test_densify_file(test_dir):
     out_file = os.path.join(tempfile.mkdtemp(), in_file)
     densify_file(os.path.join(test_dir, "data", in_file), out_file)
     assert os.path.exists(out_file)
+
+
+@pytest.mark.parametrize(
+    ("input_file", "src_crs", "expectation"),
+    [
+        (
+            "multipolygon.json",
+            None,
+            "urn:ogc:def:crs:EPSG::28992",
+        ),
+        ("geometry-4326-no-crs.json", None, None),
+        ("geometry-4326-no-crs.json", "OGC:CRS84", None),
+        (
+            "multipolygon_wrong_crs.json",
+            "EPSG:28992",
+            "urn:ogc:def:crs:EPSG::28992",
+        ),
+    ],
+)
+def test_densify_file_crs_matches_input(test_dir, input_file, src_crs, expectation):
+    output_file = os.path.join(tempfile.mkdtemp(), input_file)
+    input_file = os.path.join(test_dir, "data", input_file)
+    densify_file(input_file, output_file, src_crs=src_crs)
+    with open(output_file) as f:
+        geojson = json.load(f)
+        crs = None
+        with suppress(KeyError):
+            crs = geojson["crs"]["properties"]["name"]
+        assert crs == expectation
 
 
 @pytest.mark.parametrize(
