@@ -29,38 +29,6 @@
             "justMyCode": false
         },
         {
-            "name": "Python: densify linestrings - SHP ",
-            "type": "python",
-            "request": "launch",
-            "module": "geodense.main",
-            "args": [
-                "densify",
-                "${workspaceFolder}/tests/data/linestrings.json",
-                "${workspaceFolder}/out-data/out.shp",
-                "-o"
-            ],
-            "preLaunchTask": "clean-output-shp",
-            "justMyCode": false
-        },
-        {
-            "name": "Python: densify linestrings (GPKG)",
-            "type": "python",
-            "request": "launch",
-            "module": "geodense.main",
-            "args": [
-                "densify",
-                "${workspaceFolder}/tests/data/linestrings.gpkg",
-                "${workspaceFolder}/out-data/out.gpkg",
-                "--max-segment-length",
-                "5000",
-                "--layer",
-                "polygonen",
-                "-o"
-            ],
-            "preLaunchTask": "clean-output-gpkg",
-            "justMyCode": false
-        },
-        {
             "name": "Python: densify multipolygon",
             "type": "python",
             "request": "launch",
@@ -104,23 +72,6 @@
                 "-o"
             ],
             "justMyCode": false,
-            "preLaunchTask": "clean-output-json",
-        },
-        {
-            "name": "Python: densify linestring 3d - GPKG",
-            "type": "python",
-            "request": "launch",
-            "module": "geodense.main",
-            "args": [
-                "densify",
-                "${workspaceFolder}/tests/data/linestrings_3d.gpkg",
-                "${workspaceFolder}/out-data/out.gpkg",
-                "--max-segment-length",
-                "5000",
-                "-o"
-            ],
-            "justMyCode": false,
-            "preLaunchTask": "clean-output-gpkg",
         },
         {
             "name": "Python: check density polygons",
