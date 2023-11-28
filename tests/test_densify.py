@@ -8,10 +8,10 @@ from contextlib import suppress
 import pyproj
 import pytest
 from geodense.lib import (
+    _get_geom_densify_fun,
     _get_intermediate_nr_points_and_segment_length,
     densify_file,
     densify_geojson_object,
-    get_geom_densify_fun,
 )
 from geodense.models import DenseConfig, GeodenseError
 from geojson_pydantic import Feature, GeometryCollection
@@ -56,7 +56,7 @@ def test_linestring_d10_transformed(linestring_d10_feature_gj):
     ft_t: Feature = ft.model_copy(deep=True)
 
     c = DenseConfig(pyproj.CRS.from_epsg(28992), 10)
-    geom_densify_fun = get_geom_densify_fun(c)
+    geom_densify_fun = _get_geom_densify_fun(c)
     geom_densify_fun(ft_t.geometry, [], [])
     feature_coords_length = 2
     feature_t_coord_length = 3
@@ -79,8 +79,8 @@ def test_linestring_d10_no_op(linestring_d10_feature_gj):
     )  # 15 since 15> sqrt(10^2+10^2) -- see linestring_feature_d10.json -> this should result in no points added
     c_in_proj = DenseConfig(pyproj.CRS.from_epsg(28992), 15, True)
 
-    geom_densify_fun = get_geom_densify_fun(c)
-    geom_densify_in_proj_fun = get_geom_densify_fun(c_in_proj)
+    geom_densify_fun = _get_geom_densify_fun(c)
+    geom_densify_in_proj_fun = _get_geom_densify_fun(c_in_proj)
 
     geom_densify_fun(ft_t.geometry, [], [])
     geom_densify_in_proj_fun(ft_t_in_proj.geometry, [], [])
@@ -97,7 +97,7 @@ def test_linestring_transformed(linestring_feature_gj):
     ft_t: Feature = ft.model_copy(deep=True)
     c = DenseConfig(pyproj.CRS.from_epsg(28992), 1000)
 
-    geom_densify_fun = get_geom_densify_fun(c)
+    geom_densify_fun = _get_geom_densify_fun(c)
     geom_densify_fun(ft_t.geometry, [], [])
 
     feature_coords_length = 2
@@ -112,7 +112,7 @@ def test_densify_3d_source_projection(linestring_3d_feature_gj):
     ft_t: Feature = linestring_3d_feature_gj
     c = DenseConfig(pyproj.CRS.from_epsg(7415), 1000, True)
 
-    geom_densify_fun = get_geom_densify_fun(c)
+    geom_densify_fun = _get_geom_densify_fun(c)
     geom_densify_fun(ft_t.geometry, [], [])
 
     for i, (_, _, h) in enumerate(ft_t.geometry.coordinates):
@@ -125,7 +125,7 @@ def test_densify_3d(linestring_3d_feature_gj):
     ft_t: Feature = linestring_3d_feature_gj
     c = DenseConfig(pyproj.CRS.from_epsg(7415), 1000)
 
-    geom_densify_fun = get_geom_densify_fun(c)
+    geom_densify_fun = _get_geom_densify_fun(c)
     geom_densify_fun(ft_t.geometry, [], [])
 
     for i, (_, _, h) in enumerate(ft_t.geometry.coordinates):
@@ -140,7 +140,7 @@ def test_polygon_with_hole_transformed(polygon_feature_with_holes_gj):
 
     c = DenseConfig(pyproj.CRS.from_epsg(28992), 1000)
 
-    geom_densify_fun = get_geom_densify_fun(c)
+    geom_densify_fun = _get_geom_densify_fun(c)
     geom_densify_fun(feature_t.geometry, [], [])
 
     assert feature != feature_t
@@ -152,7 +152,7 @@ def test_linestring_transformed_source_proj(linestring_feature_gj):
 
     c = DenseConfig(pyproj.CRS.from_epsg(28992), 1000, True)
 
-    geom_densify_fun = get_geom_densify_fun(c)
+    geom_densify_fun = _get_geom_densify_fun(c)
     geom_densify_fun(feature_t.geometry, [], [])
 
     feature_coords_length = 2
@@ -170,8 +170,8 @@ def test_maxlinesegment_param(linestring_feature_gj):
     c_200 = DenseConfig(pyproj.CRS.from_epsg(28992), 200, False)
     c_1000 = DenseConfig(pyproj.CRS.from_epsg(28992), 1000, False)
 
-    geom_densify_fun_200 = get_geom_densify_fun(c_200)
-    geom_densify_fun_1000 = get_geom_densify_fun(c_1000)
+    geom_densify_fun_200 = _get_geom_densify_fun(c_200)
+    geom_densify_fun_1000 = _get_geom_densify_fun(c_1000)
 
     geom_densify_fun_200(feature_200.geometry, [], [])
     geom_densify_fun_1000(feature_1000.geometry, [], [])
