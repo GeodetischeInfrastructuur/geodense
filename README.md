@@ -1,6 +1,6 @@
 # geodense
 
-[![Endpoint Badge](https://img.shields.io/endpoint?url=https%3A%2F%2Fgeodetischeinfrastructuur.github.io%2Fgeodense%2Fbadge.json&style=flat-square&logo=pytest&logoColor=white)](https://geodetischeinfrastructuur.github.io/geodense/)
+[![Code Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fgeodetischeinfrastructuur.github.io%2Fgeodense%2Fbadge.json&style=flat-square&logo=pytest&logoColor=white)](https://geodetischeinfrastructuur.github.io/geodense/) [![Python 3.11+](https://img.shields.io/badge/python-3.11+-teal.svg?style=flat-square)](https://www.python.org/downloads/release/python-3116/) ![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)
 
 Python library and CLI tool to **check density** and **densify** geometries using the geodesic (ellipsoidal great-circle) calculation for accurate CRS transformations.
 
@@ -39,8 +39,6 @@ Created by https://www.nsgi.nl/
 See [`DOCS.md`](https://github.com/GeodetischeInfrastructuur/geodense/blob/main/DOCS.md) for usage docs; for now only containing flow-charts of the `densify` and `check-densify` subcommands.
 
 ## Development
-
-> **TODO**: add description how to setup dev environment with conda/miniconda and libmamba solver, and install pyproj with: `conda install -c conda-forge  pyproj==3.6.0 --solver=libmamba`
 
 Install/uninstall geodense for development, including dev dependencies (run from root of repository):
 
