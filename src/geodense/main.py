@@ -72,6 +72,12 @@ def check_density_cmd(
 
 
 def main() -> None:
+    source_crs_help = "override source CRS, if not specified then the CRS found in the input layer will be used; format: $AUTH:$CODE; for example: EPSG:4326"
+    verbose_help = "verbose output"
+    max_segment_length_help = (
+        f"max allowed segment length in meters; default: {DEFAULT_MAX_SEGMENT_LENGTH}"
+    )
+
     parser = argparse.ArgumentParser(
         prog="geodense",
         description="Check density and densify geometries using the geodesic (ellipsoidal great-circle) calculation for accurate CRS transformations",
@@ -94,7 +100,7 @@ def main() -> None:
         "-m",
         type=float,
         default=DEFAULT_MAX_SEGMENT_LENGTH,
-        help=f"max allowed segment length in meters; default {DEFAULT_MAX_SEGMENT_LENGTH} meter",
+        help=max_segment_length_help,
     )
 
     densify_parser.add_argument(
@@ -113,14 +119,14 @@ def main() -> None:
     )
 
     densify_parser.add_argument(
-        "-v", "--verbose", action="store_true", default=False, help="verbose output"
+        "-v", "--verbose", action="store_true", default=False, help=verbose_help
     )
 
     densify_parser.add_argument(
         "--src-crs",
         "-s",
         type=str,
-        help="override source CRS, if not specified then the CRS found in the input layer will be used",
+        help=source_crs_help,
         default=None,
     )
 
@@ -139,18 +145,18 @@ def main() -> None:
         "-m",
         type=float,
         default=DEFAULT_MAX_SEGMENT_LENGTH,
-        help=f"max allowed segment length in meters; default {DEFAULT_MAX_SEGMENT_LENGTH} meter",
+        help=max_segment_length_help,
     )
     check_density_parser.add_argument(
         "--src-crs",
         "-s",
         type=str,
-        help="override source CRS, if not specified then the CRS found in the input layer will be used",
+        help=source_crs_help,
         default=None,
     )
 
     check_density_parser.add_argument(
-        "-v", "--verbose", action="store_true", default=False, help="verbose output"
+        "-v", "--verbose", action="store_true", default=False, help=verbose_help
     )
     check_density_parser.set_defaults(func=check_density_cmd)
 

@@ -1,4 +1,4 @@
-from typing import TypeAlias
+from typing import TypeAlias, TypeVar
 
 from geojson_pydantic import (
     Feature,
@@ -13,6 +13,8 @@ from geojson_pydantic import (
 from geojson_pydantic.geometries import Geometry
 
 from geodense.geojson import CrsFeatureCollection
+
+T = TypeVar("T")
 
 GeojsonGeomNoGeomCollection: TypeAlias = (
     Point | MultiPoint | LineString | MultiLineString | Polygon | MultiPolygon

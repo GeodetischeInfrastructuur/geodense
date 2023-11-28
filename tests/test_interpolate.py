@@ -1,8 +1,8 @@
 import pytest
 from geodense.lib import (
     _add_vertices_to_line_segment,
-    get_line_segment_densify_fun,
-    interpolate_src_proj,
+    _get_line_segment_densify_fun,
+    _interpolate_src_proj,
 )
 from geodense.models import (
     DEFAULT_PRECISION_DEGREES,
@@ -15,14 +15,14 @@ from pyproj import CRS
 def test_interpolate_src_proj_no_op():
     points = [(0, 0), (10, 10)]  # 14.142
     c = DenseConfig(CRS.from_epsg(28992), 20)
-    points_t = interpolate_src_proj(*points, c)
+    points_t = _interpolate_src_proj(*points, c)
     assert points_t == [], f"expected points_t to be empty, received: {points_t}"
 
 
 def test_interpolate_src_proj():
     points = [(0, 0), (10, 10)]  # 14.142
     c = DenseConfig(CRS.from_epsg(28992), 10)
-    points_t = interpolate_src_proj(*points, c)
+    points_t = _interpolate_src_proj(*points, c)
     expected_nr_of_points = 1
 
     assert (
@@ -35,7 +35,7 @@ def test_add_vertices_exceeding_max_segment_length():
     linestring_t = linestring
 
     c = DenseConfig(CRS.from_epsg(28992), 10, True)
-    line_segment_densify = get_line_segment_densify_fun(c)
+    line_segment_densify = _get_line_segment_densify_fun(c)
     line_segment_densify(linestring_t)
     assert len(linestring_t) == 5  # noqa: PLR2004
     assert linestring_t == [(0, 0), (5.0, 5.0), (10, 10), (15.0, 15.0), (20, 20)]
@@ -114,6 +114,6 @@ def test_interpolate_3d(linestring, in_proj, expectation):
     linestring_t = linestring[:]  # clone list with slicing
     c = DenseConfig(CRS.from_epsg(7415), 10, in_proj)
 
-    line_segment_densify = get_line_segment_densify_fun(c)
+    line_segment_densify = _get_line_segment_densify_fun(c)
     line_segment_densify(linestring_t)
     assert linestring_t == expectation
