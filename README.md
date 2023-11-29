@@ -38,6 +38,10 @@ Created by https://www.nsgi.nl/
 
 See [`DOCS.md`](https://github.com/GeodetischeInfrastructuur/geodense/blob/main/DOCS.md) for usage docs; for now only containing flow-charts of the `densify` and `check-densify` subcommands.
 
+## Contributing
+
+Issues (bugs/feature requests) can be reported in the [issue tracker of this repository](https://github.com/GeodetischeInfrastructuur/geodense/issues). Pull requests are more than welcome, but we encourage to start a discussion on the issue tracker first.
+
 ## Development
 
 Install/uninstall geodense for development, including dev dependencies (run from root of repository):
