@@ -138,7 +138,6 @@ def densify_file(  # noqa: PLR0913
     src: TextIO
     with open(input_file_path) if input_file_path != "-" else sys.stdin as src:
         geojson_obj = _get_geojson_obj(src)
-
         has_3d_coords = _has_3d_coordinates(geojson_obj)
         geojson_src_crs = _get_crs_geojson(
             geojson_obj, input_file_path, src_crs, has_3d_coords
@@ -155,6 +154,7 @@ def densify_file(  # noqa: PLR0913
             output_file_path, "w"
         ) if output_file_path != "-" else sys.stdout as out_f:
             geojson_obj_model: BaseModel = cast(BaseModel, geojson_obj)
+
             out_f.write(geojson_obj_model.model_dump_json(indent=1))
 
 
@@ -478,12 +478,13 @@ def _raise_e_if_point_geom(geometry_coordinates: list[Any] | tuple[Any, ...]) ->
         )
 
 
+# TODO: fix type annotation, see type: ignore comments
 def _transform_linestrings_in_geometry_coordinates(
     geometry_coordinates: list[Any],
     transform_fun: Callable[[list[point_type]], list[T]],
-) -> list[T]:  # note should be nested type
+) -> list[T] | T:  # note should be nested type
     if all(isinstance(x, float) for x in geometry_coordinates):  # if point skip
-        return []
+        return tuple(geometry_coordinates)  # type: ignore
     if _is_linestring_geom(geometry_coordinates):
         return transform_fun(geometry_coordinates)
     else:

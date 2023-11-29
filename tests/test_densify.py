@@ -8,6 +8,7 @@ from contextlib import suppress
 import pyproj
 import pytest
 from geodense.lib import (
+    _get_geojson_obj,
     _get_geom_densify_fun,
     _get_intermediate_nr_points_and_segment_length,
     densify_file,
@@ -368,6 +369,25 @@ def test_densify_file_invalid_crs_raises(test_dir, tmpdir, crs, expectation):
     output_file = os.path.join(tmpdir, "geometry.json")
     with expectation:
         assert densify_file(input_file, output_file, src_crs=crs) is None
+
+
+def test_point_raises_warning_and_noop(test_dir, tmpdir, caplog):
+    input_file = os.path.join(test_dir, "data", "feature-geometry-collection.json")
+    output_file = os.path.join(tmpdir, "geometry.json")
+    densify_file(input_file, output_file, src_crs="EPSG:28992")
+    output = caplog.text
+    expected_warning = r"WARNING .* input file contains \(Multi\)Point geometries which cannot be densified"
+    assert re.match(
+        expected_warning, output
+    ), f"stderr expected message is: {expected_warning}, actual message was: {output}"
+
+    with open(input_file) as in_f, open(output_file) as out_f:
+        ft_gc: Feature = _get_geojson_obj(in_f)
+        ft_gc_t: Feature = _get_geojson_obj(out_f)
+        assert (
+            ft_gc.geometry.geometries[0].coordinates
+            == ft_gc_t.geometry.geometries[0].coordinates
+        )  # assert point geom coords the same
 
 
 def test_densify_file_json_no_crs_outputs_message_stderr(caplog, test_dir, tmpdir):
