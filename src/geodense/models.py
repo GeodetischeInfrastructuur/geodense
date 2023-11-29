@@ -26,7 +26,7 @@ class DenseConfig:
                 f"densify_in_projection can only be used with \
 projected coordinates reference systems, crs {self.src_crs} is a geographic crs"
             )
-
+        self.back_transformer = None
         if self.src_crs.is_geographic:
             _geod = self.src_crs.get_geod()
             self.transformer = None
@@ -34,6 +34,9 @@ projected coordinates reference systems, crs {self.src_crs} is a geographic crs"
             base_crs = self._get_base_crs()
             self.transformer = Transformer.from_crs(src_crs, base_crs, always_xy=True)
             _geod = self.src_crs.get_geod()
+            self.back_transformer = Transformer.from_crs(
+                base_crs, src_crs, always_xy=True
+            )
         else:
             raise GeodenseError(
                 "unexpected crs encountered, crs is neither geographic nor projected"
