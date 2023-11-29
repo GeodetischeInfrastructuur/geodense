@@ -18,7 +18,7 @@ from geojson_pydantic import (
 )
 from geojson_pydantic.geometries import Geometry
 from pydantic import BaseModel
-from pyproj import CRS, Transformer
+from pyproj import CRS
 from shapely import LineString as ShpLineString
 from shapely import Point as ShpPoint
 
@@ -253,14 +253,11 @@ def _interpolate_geodesic(
         def optional_back_transform(lon: float, lat: float) -> tuple[Any, Any]:
             """technically should be named optional_back_convert, since crs->base crs is (mostly) a conversion and not a transformation"""
             if densify_config.src_crs.is_projected:
-                if transformer is None:
+                if densify_config.back_transformer is None:
                     raise GeodenseError(
-                        "transformer cannot be None when src_crs.is_projected=True"
+                        "back_transformer cannot be None when src_crs.is_projected=True"
                     )
-                back_transformer = Transformer.from_crs(
-                    transformer.target_crs, transformer.source_crs, always_xy=True
-                )
-                return back_transformer.transform(lon, lat)
+                return densify_config.back_transformer.transform(lon, lat)
             return (lon, lat)
 
         if three_dimensional_points:
