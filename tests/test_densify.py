@@ -25,7 +25,7 @@ from geojson_pydantic import Feature, GeometryCollection
             "point_feature_gj",
             pytest.raises(
                 GeodenseError,
-                match=r"input file contains only \(Multi\)Point geometries which cannot be densified",
+                match=r"cannot run densify on GeoJSON that only contains \(Multi\)Point geometries",
             ),
         ),
         (
@@ -58,7 +58,7 @@ def test_linestring_d10_transformed(linestring_d10_feature_gj):
 
     c = DenseConfig(pyproj.CRS.from_epsg(28992), 10)
     geom_densify_fun = _get_geom_densify_fun(c)
-    geom_densify_fun(ft_t.geometry, [], [])
+    geom_densify_fun(ft_t.geometry)
     feature_coords_length = 2
     feature_t_coord_length = 3
 
@@ -83,8 +83,8 @@ def test_linestring_d10_no_op(linestring_d10_feature_gj):
     geom_densify_fun = _get_geom_densify_fun(c)
     geom_densify_in_proj_fun = _get_geom_densify_fun(c_in_proj)
 
-    geom_densify_fun(ft_t.geometry, [], [])
-    geom_densify_in_proj_fun(ft_t_in_proj.geometry, [], [])
+    geom_densify_fun(ft_t.geometry)
+    geom_densify_in_proj_fun(ft_t_in_proj.geometry)
 
     feature_coords_length = 2
 
@@ -99,7 +99,7 @@ def test_linestring_transformed(linestring_feature_gj):
     c = DenseConfig(pyproj.CRS.from_epsg(28992), 1000)
 
     geom_densify_fun = _get_geom_densify_fun(c)
-    geom_densify_fun(ft_t.geometry, [], [])
+    geom_densify_fun(ft_t.geometry)
 
     feature_coords_length = 2
     feature_t_coord_length = 12
@@ -114,7 +114,7 @@ def test_densify_3d_source_projection(linestring_3d_feature_gj):
     c = DenseConfig(pyproj.CRS.from_epsg(7415), 1000, True)
 
     geom_densify_fun = _get_geom_densify_fun(c)
-    geom_densify_fun(ft_t.geometry, [], [])
+    geom_densify_fun(ft_t.geometry)
 
     for i, (_, _, h) in enumerate(ft_t.geometry.coordinates):
         assert h == (
@@ -127,7 +127,7 @@ def test_densify_3d(linestring_3d_feature_gj):
     c = DenseConfig(pyproj.CRS.from_epsg(7415), 1000)
 
     geom_densify_fun = _get_geom_densify_fun(c)
-    geom_densify_fun(ft_t.geometry, [], [])
+    geom_densify_fun(ft_t.geometry)
 
     for i, (_, _, h) in enumerate(ft_t.geometry.coordinates):
         assert h == (
@@ -142,7 +142,7 @@ def test_polygon_with_hole_transformed(polygon_feature_with_holes_gj):
     c = DenseConfig(pyproj.CRS.from_epsg(28992), 1000)
 
     geom_densify_fun = _get_geom_densify_fun(c)
-    geom_densify_fun(feature_t.geometry, [], [])
+    geom_densify_fun(feature_t.geometry)
 
     assert feature != feature_t
 
@@ -154,7 +154,7 @@ def test_linestring_transformed_source_proj(linestring_feature_gj):
     c = DenseConfig(pyproj.CRS.from_epsg(28992), 1000, True)
 
     geom_densify_fun = _get_geom_densify_fun(c)
-    geom_densify_fun(feature_t.geometry, [], [])
+    geom_densify_fun(feature_t.geometry)
 
     feature_coords_length = 2
     feature_t_coord_length = 12
@@ -174,9 +174,13 @@ def test_maxlinesegment_param(linestring_feature_gj):
     geom_densify_fun_200 = _get_geom_densify_fun(c_200)
     geom_densify_fun_1000 = _get_geom_densify_fun(c_1000)
 
-    geom_densify_fun_200(feature_200.geometry, [], [])
-    geom_densify_fun_1000(feature_1000.geometry, [], [])
+    # note geom_densify_fun returns coordinates and modifies coords in place
+    # maybe change to keep it more fucntional and let the calling code update the coords
+    coords_200 = geom_densify_fun_200(feature_200.geometry)
+    coords_1000 = geom_densify_fun_1000(feature_1000.geometry)
 
+    assert coords_200 == feature_200.geometry.coordinates
+    assert coords_1000 == feature_1000.geometry.coordinates
     assert len(feature_200.geometry.coordinates) > len(
         feature_1000.geometry.coordinates
     )
@@ -290,7 +294,7 @@ def test_densify_file_in_proj_exc(tmpdir, test_dir):
     with pytest.raises(
         GeodenseError,
         match=(
-            r"densify_in_projection can only be used with projected coordinates "
+            r"in_projection can only be used with projected coordinates "
             r"reference systems, crs .+ is a geographic crs"
         ),
     ):
@@ -376,10 +380,10 @@ def test_point_raises_warning_and_noop(test_dir, tmpdir, caplog):
     output_file = os.path.join(tmpdir, "geometry.json")
     densify_file(input_file, output_file, src_crs="EPSG:28992")
     output = caplog.text
-    expected_warning = r"WARNING .* input file contains \(Multi\)Point geometries which cannot be densified"
+    expected_warning = r"WARNING .* GeoJSON contains \(Multi\)Point geometries, cannot run densify on \(Multi\)Point geometries.*"
     assert re.match(
         expected_warning, output
-    ), f"stderr expected message is: {expected_warning}, actual message was: {output}"
+    ), f"stderr expected message is: '{expected_warning}', actual message was: '{output}'"
 
     with open(input_file) as in_f, open(output_file) as out_f:
         ft_gc: Feature = _get_geojson_obj(in_f)

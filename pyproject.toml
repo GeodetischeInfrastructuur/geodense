@@ -62,8 +62,6 @@ namespaces = false # to disable scanning PEP 420 namespaces (true by default)
 
 [tool.ruff]
 # see https://beta.ruff.rs/docs/rules/
-# TODO:
-# - add pydocstyle (D)
 select = [
     "E",
     "F",

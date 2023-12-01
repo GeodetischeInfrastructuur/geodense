@@ -14,6 +14,7 @@ from geodense.lib import (
     get_cmd_result_message,
 )
 from geodense.models import DEFAULT_MAX_SEGMENT_LENGTH, GeodenseError
+from geodense.types import ReportLineString
 
 logger = logging.getLogger("geodense")
 
@@ -58,9 +59,13 @@ def densify_cmd(  # noqa: PLR0913
 def check_density_cmd(
     input_file: str,
     max_segment_length: float,
+    in_projection: bool = False,
     src_crs: str | None = None,
 ) -> None:
-    result = check_density_file(input_file, max_segment_length, src_crs)
+    result: list[ReportLineString] = check_density_file(
+        input_file, max_segment_length, src_crs, in_projection=in_projection
+    )
+
     cmd_output = get_cmd_result_message(input_file, result, max_segment_length)
 
     if len(result) == 0:
@@ -153,6 +158,13 @@ def main() -> None:
         type=str,
         help=source_crs_help,
         default=None,
+    )
+    check_density_parser.add_argument(
+        "--in-projection",
+        "-p",
+        action="store_true",
+        default=False,
+        help="check density using linear interpolation in source projection instead of the geodesic, not applicable when source CRS is geographic",
     )
 
     check_density_parser.add_argument(
