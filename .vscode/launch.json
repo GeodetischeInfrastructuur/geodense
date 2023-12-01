@@ -80,9 +80,11 @@
             "module": "geodense.main",
             "args": [
                 "check-density",
-                "${workspaceFolder}/tests/data/polygons.json",
+                "${workspaceFolder}/tests/data/feature-geometry-collection-with-point.json",
                 "--max-segment-length",
-                "5000"
+                "5000",
+                "--src-crs",
+                "EPSG:28992"
             ],
             "justMyCode": false
         },

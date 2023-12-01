@@ -23,7 +23,7 @@ class DenseConfig:
 
         if self.src_crs.is_geographic and in_projection:
             raise GeodenseError(
-                f"densify_in_projection can only be used with \
+                f"in_projection can only be used with \
 projected coordinates reference systems, crs {self.src_crs} is a geographic crs"
             )
         self.back_transformer = None
