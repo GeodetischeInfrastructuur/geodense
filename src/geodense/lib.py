@@ -174,8 +174,7 @@ def apply_function_on_geojson_geometries(  # noqa: C901
     | CrsFeatureCollection
     | GeojsonGeomNoGeomCollection
     | GeometryCollection,
-    callback: Callable[[GeojsonGeomNoGeomCollection, list[int] | None], Nested | None],
-    indices: list[int] | None = None,
+    callback: Callable[[GeojsonGeomNoGeomCollection], Nested | None],
 ) -> Nested:
     result: Nested = []
 
@@ -184,46 +183,42 @@ def apply_function_on_geojson_geometries(  # noqa: C901
         if isinstance(feature.geometry, GeometryCollection):
             return apply_function_on_geojson_geometries(feature.geometry, callback)
         geom = cast(GeojsonGeomNoGeomCollection, feature.geometry)
-        return [callback(geom, None)]
+        return [callback(geom)]
     elif isinstance(
         body, Point | MultiPoint | LineString | MultiLineString | Polygon | MultiPolygon
     ):
         geom = cast(GeojsonGeomNoGeomCollection, body)
-        return [callback(geom, indices)]
+        return [callback(geom)]
     elif isinstance(body, CrsFeatureCollection):
         fc_body: CrsFeatureCollection = body
         features: Iterable[Feature] = fc_body.features
 
-        for i, ft in enumerate(features):
+        for ft in features:
             if ft.geometry is None:
                 raise GeodenseError(f"feature does not have a geometry, feature: {ft}")
 
             result_list = list(result)
             if isinstance(ft.geometry, GeometryCollection):
                 ft_result: Nested = apply_function_on_geojson_geometries(
-                    ft.geometry, callback, [i]
+                    ft.geometry, callback
                 )
                 result_list.append(ft_result)
             else:
-                result_list.append(callback(ft.geometry, [i]))
+                result_list.append(callback(ft.geometry))
             result = result_list
         return result
     elif isinstance(body, GeometryCollection):
         gc = cast(GeometryCollection, body)
         geometries: list[Geometry] = gc.geometries
 
-        for i, g in enumerate(geometries):
-            n_indices = None
-            if indices is not None:
-                n_indices = indices[:]
-                n_indices.append(i)
+        for g in geometries:
             if isinstance(g, GeometryCollection):
                 raise GeodenseError("nested GeometryCollections are not supported")
             g_no_gc = cast(
                 GeojsonGeomNoGeomCollection, g
             )  # geojson prohibits nested geometrycollections - maybe throw exception if this occurs
             result_list = list(result)
-            result_list.append(callback(g_no_gc, n_indices))
+            result_list.append(callback(g_no_gc))
             result = result_list
         return result
     return result
@@ -671,7 +666,6 @@ def _get_geometry_type(
 
 def _geom_has_3d_coords(
     geometry: GeojsonGeomNoGeomCollection,
-    _indices: list[int] | None,
 ) -> Nested[bool] | None:
     def _linestring_has_3d_coords(linestring_coords: LineStringCoords) -> Nested[bool]:
         return [len(x) == THREE_DIMENSIONAL for x in linestring_coords]
@@ -700,11 +694,8 @@ def _get_line_segment_densify_fun(
 
 def _get_geom_densify_fun(
     densify_config: DenseConfig,
-) -> Callable[[GeojsonGeomNoGeomCollection, list[int] | None], GeojsonCoordinates]:
-    def _geom_densify(
-        geometry: GeojsonGeomNoGeomCollection,
-        _indices: list[int] | None = None,
-    ) -> GeojsonCoordinates:
+) -> Callable[[GeojsonGeomNoGeomCollection], GeojsonCoordinates]:
+    def _geom_densify(geometry: GeojsonGeomNoGeomCollection) -> GeojsonCoordinates:
         _add_vertices_exceeding_max_segment_length = _get_line_segment_densify_fun(
             densify_config
         )
