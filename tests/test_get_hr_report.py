@@ -1,6 +1,6 @@
 from geodense.lib import (
-    _flatten,
     check_density_geometry_coordinates,
+    flatten,
     get_cmd_result_message,
 )
 from geodense.models import DenseConfig
@@ -31,7 +31,7 @@ def test_get_hr_report(linestring_feature_multiple_linesegments):
     result: Nested[ReportLineString] = check_density_geometry_coordinates(
         feature.geometry.coordinates, c
     )
-    flat_result: list[ReportLineString] = list(_flatten(result))
+    flat_result: list[ReportLineString] = list(flatten(result))
 
     cmd_output = get_cmd_result_message("my-file", flat_result, max_segment_length)
     assert cmd_output.startswith(

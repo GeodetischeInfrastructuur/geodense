@@ -4,9 +4,9 @@ from unittest import mock
 
 import pytest
 from geodense.lib import (
-    _flatten,
     check_density_file,
     check_density_geometry_coordinates,
+    flatten,
 )
 from geodense.models import DenseConfig, GeodenseError
 from geodense.types import Nested, ReportLineString
@@ -26,7 +26,7 @@ def test_check_density_not_pass(linestring_feature_gj):
     result: Nested[ReportLineString] = check_density_geometry_coordinates(
         feature.geometry.coordinates, d_conf
     )
-    flat_result: list[ReportLineString] = list(_flatten(result))
+    flat_result: list[ReportLineString] = list(flatten(result))
     assert len(flat_result) > 0
 
 
@@ -46,7 +46,7 @@ def test_check_density_polygon_with_hole_not_pass(polygon_feature_with_holes_gj)
     result: Nested[ReportLineString] = check_density_geometry_coordinates(
         feature.geometry.coordinates, d_conf
     )
-    flat_result: list[ReportLineString] = list(_flatten(result))
+    flat_result: list[ReportLineString] = list(flatten(result))
     assert len(flat_result) > 0
 
 
@@ -78,7 +78,7 @@ def test_check_density_3d(linestring_3d_feature_gj):
     result: Nested[ReportLineString] = check_density_geometry_coordinates(
         feature_t.geometry.coordinates, d_conf
     )
-    flat_result: list[ReportLineString] = list(_flatten(result))
+    flat_result: list[ReportLineString] = list(flatten(result))
     assert len(flat_result) > 0
 
 

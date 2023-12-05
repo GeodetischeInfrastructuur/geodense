@@ -116,7 +116,7 @@ def check_density_file(
             geojson_obj, density_check_fun
         )
 
-    flat_result: list[ReportLineString] = list(_flatten(result))
+    flat_result: list[ReportLineString] = list(flatten(result))
     return flat_result
 
 
@@ -427,10 +427,10 @@ def _get_crs_geojson(
     return result
 
 
-def _flatten(container: Nested) -> Iterable:
+def flatten(container: Nested) -> Iterable:
     for i in container:
         if isinstance(i, Sequence) and not isinstance(i, tuple):
-            yield from _flatten(i)
+            yield from flatten(i)
         else:
             yield i
 
@@ -716,7 +716,7 @@ def _has_3d_coordinates(
     has_3d_coords: Nested[bool] = apply_function_on_geojson_geometries(
         geojson_obj, _geom_has_3d_coords
     )
-    has_3d_coords_flat = _flatten(has_3d_coords)
+    has_3d_coords_flat = flatten(has_3d_coords)
 
     result = True  # default case all 3d
     if not all(has_3d_coords_flat) and any(has_3d_coords_flat):  # some 3d
