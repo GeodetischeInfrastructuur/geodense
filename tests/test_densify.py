@@ -8,11 +8,11 @@ from contextlib import suppress
 import pyproj
 import pytest
 from geodense.lib import (
-    _get_geojson_obj,
     _get_geom_densify_fun,
     _get_intermediate_nr_points_and_segment_length,
     densify_file,
     densify_geojson_object,
+    get_geojson_obj,
 )
 from geodense.models import DenseConfig, GeodenseError
 from geojson_pydantic import Feature, GeometryCollection
@@ -386,8 +386,8 @@ def test_point_raises_warning_and_noop(test_dir, tmpdir, caplog):
     ), f"stderr expected message is: '{expected_warning}', actual message was: '{output}'"
 
     with open(input_file) as in_f, open(output_file) as out_f:
-        ft_gc: Feature = _get_geojson_obj(in_f)
-        ft_gc_t: Feature = _get_geojson_obj(out_f)
+        ft_gc: Feature = get_geojson_obj(in_f)
+        ft_gc_t: Feature = get_geojson_obj(out_f)
         assert (
             ft_gc.geometry.geometries[0].coordinates
             == ft_gc_t.geometry.geometries[0].coordinates

@@ -100,7 +100,7 @@ def check_density_file(
     _validate_file_args(input_file_path)
 
     with open(input_file_path) if input_file_path != "-" else sys.stdin as src:
-        geojson_obj = _get_geojson_obj(src)
+        geojson_obj = get_geojson_obj(src)
         _geom_type_check(geojson_obj, "check-density")
         has_3d_coords = _has_3d_coordinates(geojson_obj)
         geojson_src_crs = _get_crs_geojson(
@@ -148,7 +148,7 @@ def densify_file(  # noqa: PLR0913
     _validate_file_args(input_file_path, output_file_path, overwrite)
     src: TextIO
     with open(input_file_path) if input_file_path != "-" else sys.stdin as src:
-        geojson_obj = _get_geojson_obj(src)
+        geojson_obj = get_geojson_obj(src)
         has_3d_coords = _has_3d_coordinates(geojson_obj)
         geojson_src_crs = _get_crs_geojson(
             geojson_obj, input_file_path, src_crs, has_3d_coords
@@ -353,7 +353,7 @@ def _interpolate_src_proj(
         ]
 
 
-def _get_geojson_obj(src: TextIO) -> GeojsonObject:
+def get_geojson_obj(src: TextIO) -> GeojsonObject:
     src_json = json.loads(src.read())
     type_map = {
         "Feature": Feature,
