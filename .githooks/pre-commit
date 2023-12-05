@@ -41,8 +41,8 @@ then
   exit 0
 fi
 
-# TODO: enably mypy after adding type annotations
-# command_available "mypy"
+
+command_available "mypy"
 print_message "running mypy static type checking" 1 "" true
 if ! mypy src;then
     print_message "mypy static type check failed - commit aborted" 1 "ERROR" true
