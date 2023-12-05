@@ -1,7 +1,5 @@
 # DOCS
 
-> **TODO:** Add graphs for density-check command.
-
 ## Densify command
 
 See the following flowchart for a highlevel schematic overview of the `densify` functionality of `geodense`:
