@@ -1,11 +1,11 @@
-name: Run linting and unit tests
+name: Run linting, type check and unit tests
 
 on:
   pull_request:
 
 jobs:
   linting_and_tests:
-    name: Linting and Tests | python=${{ matrix.python-version }}
+    name: Linting, Type Check and Tests | python=${{ matrix.python-version }}
 
     runs-on: ubuntu-latest
 
@@ -30,13 +30,17 @@ jobs:
           python${{ matrix.python-version }} -m pip install --upgrade pip
           python${{ matrix.python-version }} -m pip install --force-reinstall -e ".[dev]"
 
-      - name: Lint with black
+      - name: Lint with Black
         run: |
           python${{ matrix.python-version }} -m black --check .
 
-      - name: Lint with ruff
+      - name: Lint with Ruff
         run: |
           python${{ matrix.python-version }} -m ruff -v .
+
+      - name: Run Mypy
+        run: |
+          python${{ matrix.python-version }} -m mypy src/
 
       - name: Test with pytest and generate coverage report
         run: |
