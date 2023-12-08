@@ -286,14 +286,16 @@ def _interpolate_geodesic(
 
         if three_dimensional_points:
             # interpolate height for three_dimensional_points
-            height_a = a[2:][0]
-            height_b = b[2:][0]
+            a_3d: tuple[float, float, float] = cast(tuple[float, float, float], a)
+            b_3d: tuple[float, float, float] = cast(tuple[float, float, float], b)
+            height_a = a_3d[2:][0]
+            height_b = b_3d[2:][0]
             delta_height_b_a = height_b - height_a
             delta_height_per_point = delta_height_b_a * (
                 new_max_segment_length / geod_dist
             )
             return [
-                tuple(
+                tuple(  # type: ignore
                     (
                         *optional_back_transform(lon, lat),
                         round(
@@ -520,7 +522,8 @@ def _transform_linestrings_in_geometry_coordinates(
         else:
             return None
     if _is_linestring_geom(geometry_coordinates):
-        return transform_fun(geometry_coordinates)
+        linestring_coords = cast(LineStringCoords, geometry_coordinates)
+        return transform_fun(linestring_coords)
     else:
         return [
             _transform_linestrings_in_geometry_coordinates(
@@ -699,7 +702,7 @@ def _get_geom_densify_fun(
         _add_vertices_exceeding_max_segment_length = _get_line_segment_densify_fun(
             densify_config
         )
-        result: GeojsonCoordinates = _transform_linestrings_in_geometry_coordinates(
+        result: GeojsonCoordinates = _transform_linestrings_in_geometry_coordinates(  # type: ignore
             geometry.coordinates,
             _add_vertices_exceeding_max_segment_length,
             retain_point_geoms=True,
