@@ -49,16 +49,12 @@ if ! mypy src;then
     exit 1
 fi
 
-FILES=$(git diff --cached --name-only --diff-filter=ACMR | sed 's| |\\ |g' | { grep -E "\.py$" || test $? = 1; })
-
-[ -z "$FILES" ] && print_message "no python files in commit to format and lint" -1 "" true && exit 0
-
-command_available "ruff"
-print_message "running ruff  linting" 1 "INFO" true
-echo "$FILES" | xargs ruff --fix
-
 command_available "black"
 print_message "black autoformatting" 1 "INFO" true
-echo "$FILES" | xargs black --stdin-filename {}
+black .
 
-echo "$FILES" | xargs git add
+command_available "ruff"
+print_message "running ruff linting with --fix" 1 "INFO" true
+ruff --fix .
+
+git add -u #  stages modifications and deletions, without new files

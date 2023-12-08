@@ -9,8 +9,6 @@ from cli_test_helpers import ArgvContext
 from geodense.main import check_density_cmd, main
 from geodense.models import DEFAULT_MAX_SEGMENT_LENGTH, GeodenseError
 
-USAGE_REGEX = r"^Usage: geodense (\[.+\])+ \{.*?\}"
-
 
 @patch("geodense.main.densify_cmd")
 def test_cli_densify_cmd(mock_command, tmpdir, test_dir):
@@ -132,6 +130,9 @@ def test_cli_check_density_shows_outputs_error_returns_1(caplog, test_dir):
             r"ERROR\s+geodense:main.py:.* FOOBAR\n",
             caplog.text,
         )
+
+
+USAGE_REGEX = r"^Usage: geodense (?:\[-[a-z]{1}\]\s)+\{.*?}"
 
 
 def test_cli_shows_help_text_stderr_invoked_no_args(capsys):
