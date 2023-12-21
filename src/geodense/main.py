@@ -77,7 +77,8 @@ def check_density_cmd(
 
 
 def main() -> None:
-    source_crs_help = "override source CRS, if not specified then the CRS found in the input layer will be used; format: $AUTH:$CODE; for example: EPSG:4326"
+    input_file_help = "any valid GeoJSON file, accepted GeoJSON objects: FeatureCollection, Feature, Geometry and GeometryCollection "
+    source_crs_help = "override source CRS, if not specified then the CRS found in the GeoJSON input file will be used; format: $AUTH:$CODE; for example: EPSG:4326"
     verbose_help = "verbose output"
     max_segment_length_help = (
         f"max allowed segment length in meters; default: {DEFAULT_MAX_SEGMENT_LENGTH}"
@@ -97,8 +98,8 @@ def main() -> None:
         formatter_class=parser.formatter_class,
         description="Densify (multi)polygon and (multi)linestring geometries along the geodesic (ellipsoidal great-circle), in base CRS (geographic) in case of projected source CRS.Supports GeoJSON as input file format. When supplying 3D coordinates, the height is linear interpolated for both geographic CRSs with ellipsoidal height and for compound CRSs with physical height.",
     )
-    densify_parser.add_argument("input_file", type=str)
-    densify_parser.add_argument("output_file", type=str)
+    densify_parser.add_argument("input_file", type=str, help=input_file_help)
+    densify_parser.add_argument("output_file", type=str, help="output file path")
 
     densify_parser.add_argument(
         "--max-segment-length",
@@ -144,7 +145,7 @@ def main() -> None:
         When result of check is OK the program will return with exit code 0, when result \
         is FAILED the program will return with exit code 1.",
     )
-    check_density_parser.add_argument("input_file", type=str)
+    check_density_parser.add_argument("input_file", type=str, help=input_file_help)
     check_density_parser.add_argument(
         "--max-segment-length",
         "-m",
