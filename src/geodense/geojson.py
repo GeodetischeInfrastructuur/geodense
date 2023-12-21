@@ -15,17 +15,19 @@ class GeoJsonCrsProp(BaseModel):
 
 class GeoJsonCrs(BaseModel):
     properties: GeoJsonCrsProp
-    type: Literal["name"]
+    type: Literal["name"] = "name"
 
 
 class CrsFeatureCollection(FeatureCollection):
     crs: GeoJsonCrs | None = None
+    name: str | None = None
 
     def set_crs_auth_code(self: "CrsFeatureCollection", crs_auth_code: str) -> None:
         crs_auth, crs_identifier = crs_auth_code.split(":")
+        geojson_crs_val = f"urn:ogc:def:crs:{crs_auth}::{crs_identifier}"
         if self.crs is None:
-            raise ValueError(f"self.crs is none of CrsFeatureCollection: {self}")
-        self.crs.properties.name = f"urn:ogc:def:crs:{crs_auth}::{crs_identifier}"
+            self.crs = GeoJsonCrs(properties=GeoJsonCrsProp(name=geojson_crs_val))
+        self.crs.properties.name = geojson_crs_val
 
     def get_crs_auth_code(self: "CrsFeatureCollection") -> str | None:
         if self.crs is None:

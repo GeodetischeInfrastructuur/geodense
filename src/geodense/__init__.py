@@ -1,5 +1,6 @@
 import contextlib
 import logging
+import sys
 from importlib.metadata import PackageNotFoundError, version
 from logging import Formatter, NullHandler, StreamHandler
 
@@ -11,7 +12,7 @@ with contextlib.suppress(PackageNotFoundError):
 
 def get_log_handler(verbose: bool) -> logging.StreamHandler:
     formatter = get_formatter(verbose)
-    handler = logging.StreamHandler()
+    handler = logging.StreamHandler(stream=sys.stderr)
     handler.setFormatter(formatter)
     return handler
 

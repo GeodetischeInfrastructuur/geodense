@@ -4,7 +4,8 @@ import math
 import os
 import sys
 from collections.abc import Callable, Iterable, Sequence
-from typing import Any, TextIO, cast
+from enum import Enum
+from typing import Any, Literal, TextIO, cast
 
 from geojson_pydantic import (
     Feature,
@@ -102,10 +103,11 @@ def check_density_file(
     with open(input_file_path) if input_file_path != "-" else sys.stdin as src:
         geojson_obj = get_geojson_obj(src)
         _geom_type_check(geojson_obj, "check-density")
-        has_3d_coords = _has_3d_coordinates(geojson_obj)
+        has_3d_coords: Has3D = _has_3d_coordinates(geojson_obj)
         geojson_src_crs = _get_crs_geojson(
             geojson_obj, input_file_path, src_crs, has_3d_coords
         )
+
         config = DenseConfig(
             CRS.from_authority(*geojson_src_crs.split(":")),
             max_segment_length,
@@ -149,7 +151,7 @@ def densify_file(  # noqa: PLR0913
     src: TextIO
     with open(input_file_path) if input_file_path != "-" else sys.stdin as src:
         geojson_obj = get_geojson_obj(src)
-        has_3d_coords = _has_3d_coordinates(geojson_obj)
+        has_3d_coords: Has3D = _has_3d_coordinates(geojson_obj)
         geojson_src_crs = _get_crs_geojson(
             geojson_obj, input_file_path, src_crs, has_3d_coords
         )
@@ -166,7 +168,7 @@ def densify_file(  # noqa: PLR0913
         ) if output_file_path != "-" else sys.stdout as out_f:
             geojson_obj_model: BaseModel = cast(BaseModel, geojson_obj)
 
-            out_f.write(geojson_obj_model.model_dump_json(indent=1))
+            out_f.write(geojson_obj_model.model_dump_json(indent=1, exclude_none=True))
 
 
 def apply_function_on_geojson_geometries(  # noqa: C901
@@ -244,6 +246,7 @@ def _interpolate_geodesic(
             raise GeodenseError(
                 "transformer cannot be None when src_crs.is_projected=True"
             )
+        # technically the following transform call is a converion and not a transformation, since crs->base-crs will be a conversion in most cases
         a_t: tuple[float, float] = transformer.transform(*a_2d)
         b_t: tuple[float, float] = transformer.transform(*b_2d)
     else:  # src_crs is geographic do not transform
@@ -402,31 +405,54 @@ def check_density_geometry_coordinates(
         ]
 
 
+class Has3D(Enum):
+    all: Literal["all"] = "all"
+    some: Literal["some"] = "some"
+    none: Literal["none"] = "none"
+
+
 def _get_crs_geojson(
     geojson_object: GeojsonObject,
     input_file_path: str,
     src_crs: str | None,
-    has_3d_coords: bool,
+    has_3d_coords: Has3D,
 ) -> str:
-    result: str | None = None
+    result_crs: str | None = None
+
+    is_fc = False
     if isinstance(geojson_object, CrsFeatureCollection):
-        result = geojson_object.get_crs_auth_code()
+        result_crs = geojson_object.get_crs_auth_code()
+        is_fc = True
+
+    # case to set default CRS if src_crs not specified and not available in GeoJSON
     if (
-        result is None and src_crs is None
+        result_crs is None and src_crs is None
     ):  # set default crs if not in geojson object and not overridden with src_crs
         default_crs = DEFAULT_CRS_2D
-        if has_3d_coords:
+        if has_3d_coords in [Has3D.some, Has3D.all]:
             default_crs = DEFAULT_CRS_3D
         message = f"unable to determine source CRS for file {input_file_path}, assumed CRS is {default_crs}"
         logger.warning(message)
-        result = default_crs
-    else:
-        result = (
-            src_crs if src_crs is not None else result
+        result_crs = default_crs
+        if is_fc:
+            fc: CrsFeatureCollection = cast(CrsFeatureCollection, geojson_object)
+            fc.set_crs_auth_code(result_crs)
+
+    # is src_crs is set use src_crs
+    elif src_crs is not None:
+        src_crs_crs: CRS = CRS.from_authority(*src_crs.split(":"))
+        if has_3d_coords == Has3D.all and not src_crs_crs.is_vertical:
+            logger.warning(
+                "src_crs is 2D while input data contains geometries with 3D coordinates"
+            )
+        result_crs = (
+            src_crs if src_crs is not None else result_crs
         )  # override json_crs with src_crs if defined
-    if result is None:
-        raise GeodenseError("could not determin crs from GeoJSON object")
-    return result
+
+    elif result_crs is None:
+        raise GeodenseError("could not determine CRS from GeoJSON object")
+
+    return result_crs
 
 
 def flatten(container: Nested) -> Iterable:
@@ -715,20 +741,19 @@ def _get_geom_densify_fun(
 
 def _has_3d_coordinates(
     geojson_obj: GeojsonObject, silent: bool | None = False
-) -> bool:
+) -> Has3D:
     has_3d_coords: Nested[bool] = apply_function_on_geojson_geometries(
         geojson_obj, _geom_has_3d_coords
     )
-    has_3d_coords_flat = flatten(has_3d_coords)
-
-    result = True  # default case all 3d
+    has_3d_coords_flat = list(flatten(has_3d_coords))
     if not all(has_3d_coords_flat) and any(has_3d_coords_flat):  # some 3d
         if not silent:
             warning_message = "geometries with mixed 2D and 3D vertices found"
             logger.warning(warning_message)
+        return Has3D.some
     elif all(not x for x in has_3d_coords_flat):  # none 3d
-        result = False
-    return result
+        return Has3D.none
+    return Has3D.all
 
 
 def _geom_type_check(geojson_obj: GeojsonObject, command: str = "") -> None:
