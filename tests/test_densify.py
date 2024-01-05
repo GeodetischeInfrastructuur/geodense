@@ -257,29 +257,6 @@ def test_densify_file_crs_matches_input(test_dir, input_file, src_crs, expectati
         assert crs == expectation
 
 
-@pytest.mark.parametrize(
-    ("input_file", "output_file", "expectation"),
-    [
-        (
-            "linestrings.foobar",
-            "linestrings_out.foobar",
-            pytest.raises(
-                GeodenseError,
-                match=r"unsupported file extension of input-file, received: .foobar, expected one of: .geojson, .json",
-            ),
-        ),
-        ("linestrings.json", "linestrings.geojson", does_not_raise()),
-    ],
-)
-def test_densify_file_unsupported_file_format(
-    test_dir, input_file, output_file, expectation
-):
-    input_file = os.path.join(test_dir, "data", input_file)
-    output_file = os.path.join(tempfile.mkdtemp(), output_file)
-    with expectation:
-        assert densify_file(input_file, output_file) is None
-
-
 def test_densify_file_negative(tmpdir, test_dir):
     in_file = "linestrings.json"
     out_file = os.path.join(tmpdir, in_file)
@@ -306,20 +283,16 @@ def test_densify_file_input_file_does_not_exist(tmpdir, test_dir):
     output_file = os.path.join(tmpdir, "foobar.json")
 
     with pytest.raises(
-        GeodenseError,
-        match=(r"input_file .*foobar.json does not exist"),
+        FileNotFoundError,
     ):
-        assert isinstance(densify_file(input_file, output_file))
+        densify_file(input_file, output_file)
 
 
 def test_densify_file_output_dir_does_not_exist_raises(test_dir):
     input_file = os.path.join(test_dir, "data", "linestrings.json")
     output_file = os.path.join(test_dir, "foobar", "foobar.json")
 
-    with pytest.raises(
-        GeodenseError,
-        match=(r"target directory of output_file .*foobar.json does not exist"),
-    ):
+    with pytest.raises(FileNotFoundError):
         assert isinstance(densify_file(input_file, output_file))
 
 

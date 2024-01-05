@@ -1,20 +1,21 @@
 import argparse
 import logging
+import os
 import sys
 from collections.abc import Callable
+from enum import Enum
 from functools import wraps
-from typing import Any
+from typing import Any, Literal
 
 from rich_argparse import RichHelpFormatter
 
 from geodense import __version__, add_stderr_logger
 from geodense.lib import (
+    SUPPORTED_FILE_FORMATS,
     check_density_file,
     densify_file,
-    get_cmd_result_message,
 )
 from geodense.models import DEFAULT_MAX_SEGMENT_LENGTH, GeodenseError
-from geodense.types import ReportLineString
 
 logger = logging.getLogger("geodense")
 
@@ -56,23 +57,36 @@ def densify_cmd(  # noqa: PLR0913
 
 
 @cli_exception_handler
-def check_density_cmd(
+def check_density_cmd(  # noqa: PLR0913
     input_file: str,
     max_segment_length: float,
+    overwrite: bool = False,
     in_projection: bool = False,
     src_crs: str | None = None,
+    density_check_report_path: str | None = None,
 ) -> None:
-    result: list[ReportLineString] = check_density_file(
-        input_file, max_segment_length, src_crs, in_projection=in_projection
+    print(overwrite)
+
+    check_status, density_check_report_path, nr_line_segments = check_density_file(
+        input_file,
+        max_segment_length,
+        density_check_report_path,
+        src_crs,
+        in_projection=in_projection,
+        overwrite=overwrite,
     )
 
-    cmd_output = get_cmd_result_message(input_file, result, max_segment_length)
+    status = "OK" if check_status else "FAILED"
+    status_message = f"density-check {status} for file {input_file} with max-segment-length: {max_segment_length}"
 
-    if len(result) == 0:
-        print(cmd_output)
+    print(status_message)  # print status message for both OK and FAILED status
+
+    if check_status:
         sys.exit(0)
     else:
-        print(cmd_output)
+        print(
+            f"{nr_line_segments} linesegments in data exceeded max-segment-length {max_segment_length}, linesegment geometries written to GeoJSON FeatureCollection: {density_check_report_path}"
+        )
         sys.exit(1)
 
 
@@ -98,8 +112,20 @@ def main() -> None:
         formatter_class=parser.formatter_class,
         description="Densify (multi)polygon and (multi)linestring geometries along the geodesic (ellipsoidal great-circle), in base CRS (geographic) in case of projected source CRS.Supports GeoJSON as input file format. When supplying 3D coordinates, the height is linear interpolated for both geographic CRSs with ellipsoidal height and for compound CRSs with physical height.",
     )
-    densify_parser.add_argument("input_file", type=str, help=input_file_help)
-    densify_parser.add_argument("output_file", type=str, help="output file path")
+    densify_parser.add_argument(
+        "input_file",
+        type=lambda x: is_json_file_arg(
+            parser, x, "input_file", exist_required=FileRequired.exist
+        ),
+        help=input_file_help,
+    )
+    densify_parser.add_argument(
+        "output_file",
+        type=lambda x: is_json_file_arg(
+            parser, x, "output_file", exist_required=FileRequired.either
+        ),
+        help="output file path",
+    )
 
     densify_parser.add_argument(
         "--max-segment-length",
@@ -143,9 +169,15 @@ def main() -> None:
         formatter_class=parser.formatter_class,
         description="Check density of (multi)polygon and (multi)linestring geometries based on geodesic (ellipsoidal great-circle) distance, in base CRS (geographic) in case of projected source CRS. \
         When result of check is OK the program will return with exit code 0, when result \
-        is FAILED the program will return with exit code 1.",
+        is FAILED the program will return with exit code 1. The density-check report is a GeoJSON FeatureCollection containing linesegments exceeding the max-segment-length treshold.",
     )
-    check_density_parser.add_argument("input_file", type=str, help=input_file_help)
+    check_density_parser.add_argument(
+        "input_file",
+        type=lambda x: is_json_file_arg(
+            parser, x, "input_file", exist_required=FileRequired.exist
+        ),
+        help=input_file_help,
+    )
     check_density_parser.add_argument(
         "--max-segment-length",
         "-m",
@@ -167,7 +199,24 @@ def main() -> None:
         default=False,
         help="check density using linear interpolation in source projection instead of the geodesic, not applicable when source CRS is geographic",
     )
-
+    check_density_parser.add_argument(
+        "--density-check-report-path",
+        "-r",
+        dest="density_check_report_path",
+        required=False,
+        help="density-check report path, when omitted a temp file will be used. Report is only generated when density-check fails.",
+        metavar="FILE_PATH",
+        type=lambda x: is_json_file_arg(
+            parser, x, "density-check-report-path", FileRequired.either
+        ),
+    )
+    check_density_parser.add_argument(
+        "--overwrite",
+        "-o",
+        action="store_true",
+        default=False,
+        help="overwrite density-check report if exists",
+    )
     check_density_parser.add_argument(
         "-v", "--verbose", action="store_true", default=False, help=verbose_help
     )
@@ -185,6 +234,51 @@ def main() -> None:
     except AttributeError as _:
         parser.print_help(file=sys.stderr)
         sys.exit(1)
+
+
+class FileRequired(Enum):
+    exist: Literal["exist"] = "exist"
+    not_exist: Literal["not_exist"] = "not_exist"
+    either: Literal["either"] = "either"
+
+
+def is_json_file_arg(
+    parser: argparse.ArgumentParser,
+    arg: str,
+    arg_name: str,
+    exist_required: FileRequired,
+) -> str:
+    _, file_ext = os.path.splitext(arg)
+    unsupported_file_extension_msg = "unsupported file extension of {input_file}, received: {ext}, expected one of: {supported_ext}"
+    if arg != "-" and file_ext not in SUPPORTED_FILE_FORMATS["GeoJSON"]:
+        parser.error(
+            unsupported_file_extension_msg.format(
+                input_file=arg_name,
+                ext=file_ext,
+                supported_ext=", ".join(SUPPORTED_FILE_FORMATS["GeoJSON"]),
+            )
+        )
+    if (
+        exist_required != FileRequired.either
+        and arg != "-"
+        and (
+            not os.path.isfile(arg)
+            if exist_required == FileRequired.exist
+            else os.path.isfile(arg)
+        )
+    ):
+        if exist_required:
+            parser.error(f"{arg_name} {arg} does not exist")
+        else:
+            parser.error(f"{arg_name} {arg} exists")
+
+    if (
+        arg not in ["", "-"]
+        and exist_required in [FileRequired.not_exist, FileRequired.either]
+        and not os.path.exists(os.path.realpath(os.path.dirname(arg)))
+    ):
+        os.mkdir(os.path.realpath(os.path.dirname(arg)))
+    return arg
 
 
 if __name__ == "__main__":

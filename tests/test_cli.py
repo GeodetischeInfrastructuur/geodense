@@ -1,5 +1,7 @@
 import os
 import re
+import tempfile
+from contextlib import nullcontext as does_not_raise
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
@@ -37,11 +39,14 @@ def test_cli_densify_cmd(mock_command, tmpdir, test_dir):
     assert mock_command.called
 
 
-@patch("geodense.main.check_density_file", MagicMock(return_value=[]))
+@patch(
+    "geodense.main.check_density_file",
+    MagicMock(return_value=(True, "/tmp/bla/foobar.json", 0)),  # noqa: S108
+)
 def test_check_density_cmd_exit_0(test_dir):
     input_file = os.path.join(test_dir, "data", "polygons.json")
     with pytest.raises(SystemExit) as cm:
-        check_density_cmd(input_file, 20000, "")
+        check_density_cmd(input_file, 20000)
     assert cm.type == SystemExit
     expected_exit_code = 0
     assert (
@@ -61,6 +66,50 @@ def test_check_density_cmd_exit_1_when_result_not_ok(test_dir):
     assert (
         cm.value.code == expected_exit_code
     ), f"expected check_density_cmd call to exit with exit code {expected_exit_code} was {cm.value.code}"
+
+
+@pytest.mark.parametrize(
+    ("input_file", "output_file", "expectation"),
+    [
+        (
+            "linestrings.foobar",
+            "linestrings_out.foobar",
+            (
+                pytest.raises(SystemExit),
+                2,
+                r"(?sm).*geodense: error: unsupported file extension of input_file, received: \.foobar, expected one of: \.geojson, \.json.*",
+            ),
+        ),
+        ("linestrings.json", "linestrings.geojson", (does_not_raise(), 0, None)),
+    ],
+)
+def test_densify_file_unsupported_file_format(
+    test_dir, input_file, output_file, expectation, capsys
+):
+    input_file = os.path.join(test_dir, "data", input_file)
+    output_file = os.path.join(tempfile.mkdtemp(), output_file)
+
+    expected_exit = expectation[0]
+    with ArgvContext(
+        "geodense", "densify", input_file, output_file
+    ), expected_exit as cm:
+        main()
+    expected_exit_code = expectation[1]
+
+    if expected_exit_code > 0:
+        assert cm.type == SystemExit
+        assert (
+            cm.value.code == expected_exit_code
+        ), f"expected check_density_cmd call to exit with exit code {expected_exit_code} was {cm.value.code}"
+
+    expected_error_pattern = expectation[2]
+    captured = capsys.readouterr()
+
+    if expected_error_pattern is not None:
+        assert re.match(
+            expected_error_pattern,
+            captured.err,
+        )
 
 
 @patch("geodense.main.check_density_cmd")

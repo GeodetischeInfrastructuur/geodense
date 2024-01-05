@@ -1,5 +1,4 @@
 import os
-from contextlib import nullcontext as does_not_raise
 from unittest import mock
 
 import pytest
@@ -15,8 +14,11 @@ from pyproj import CRS
 
 
 def test_check_density(test_dir):
-    report = check_density_file(os.path.join(test_dir, "data/linestrings.json"), 1000)
-    assert len(report) > 0, f"expected len(report) to >0, was {len(report)}"
+    result, _, nr_segments = check_density_file(
+        os.path.join(test_dir, "data/linestrings.json"), 100
+    )
+    assert not result, "expected result is False"
+    assert nr_segments > 0
 
 
 def test_check_density_not_pass(linestring_feature_gj):
@@ -48,28 +50,6 @@ def test_check_density_polygon_with_hole_not_pass(polygon_feature_with_holes_gj)
     )
     flat_result: list[ReportLineString] = list(flatten(result))
     assert len(flat_result) > 0
-
-
-@pytest.mark.parametrize(
-    ("input_file", "expectation"),
-    [
-        (
-            "linestrings.foobar",
-            pytest.raises(
-                GeodenseError,
-                match=r"unsupported file extension of input-file, received: .foobar, expected one of: .geojson, .json",
-            ),
-        ),
-        ("linestrings.json", does_not_raise()),
-    ],
-)
-def test_density_check_geospatial_file_unsupported_file_format(
-    test_dir, input_file, expectation
-):
-    input_file = os.path.join(test_dir, "data", input_file)
-
-    with expectation:
-        assert isinstance(check_density_file(input_file, 1000), list)
 
 
 def test_check_density_3d(linestring_3d_feature_gj):
