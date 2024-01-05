@@ -3,6 +3,7 @@ import logging
 import math
 import os
 import sys
+import tempfile
 from collections.abc import Callable, Iterable, Sequence
 from enum import Enum
 from typing import Any, Literal, TextIO, cast
@@ -52,53 +53,49 @@ def densify_geojson_object(geojson_obj: GeojsonObject, dc: DenseConfig) -> None:
     _ = apply_function_on_geojson_geometries(geojson_obj, geom_densify_fun)
 
 
-def get_cmd_result_message(
-    input_file: str, report: list[ReportLineString], max_segment_length: float
-) -> str:
-    status = "PASSED" if len(report) == 0 else "FAILED"
-    status_message = f"density-check {status} for file {input_file} with max-segment-length: {max_segment_length}"
-
-    if len(report) == 0:
-        return status_message
-
-    hr_report = (
-        f"{status_message}\n\n"
-        f"Feature(s) detected that contain line-segment(s) "
-        f"exceeding max-segment-length ({max_segment_length}):\n"
-    )
-
-    for i, item in enumerate([x for x in report if x is not None]):
-        ft_index, coordinates_indices = item[0][:1], item[0][1:]
-        distance = round(item[1], DEFAULT_PRECISION_METERS)
-        ft_report = f"  - features{ft_index}.geometry.segments\
- [{', '.join([str(x) for x  in coordinates_indices])}], distance: {distance}"
-        if len(report) - 1 != i:
-            ft_report += "\n"
-        hr_report += ft_report
-    return hr_report
-
-
 def get_density_check_fun(
     densify_config: DenseConfig,
 ) -> Callable:
     def density_check(
         geometry: GeojsonGeomNoGeomCollection,
-        indices: list[int] | None = None,
     ) -> Nested[ReportLineString]:
-        return check_density_geometry_coordinates(
-            geometry.coordinates, densify_config, indices
-        )
+        return check_density_geometry_coordinates(geometry.coordinates, densify_config)
 
     return density_check
 
 
-def check_density_file(
+def _validate_dependent_file_args(
+    input_file_path: str,
+    output_file_path: str | None = None,
+    overwrite: bool = False,
+) -> None:
+    if output_file_path is not None and (
+        input_file_path == output_file_path and input_file_path != "-"
+    ):
+        raise GeodenseError(
+            f"input_file and output_file arguments must be different, input_file: {input_file_path}, output_file: {output_file_path}"
+        )
+    if output_file_path is not None and output_file_path != "-":
+        if os.path.exists(output_file_path) and not overwrite:
+            raise GeodenseError(f"output_file {output_file_path} already exists")
+        elif os.path.exists(output_file_path) and overwrite:
+            os.remove(output_file_path)
+
+
+def check_density_file(  # noqa: PLR0913
     input_file_path: str,
     max_segment_length: float,
+    density_check_report_path: str | None = None,
     src_crs: str | None = None,
     in_projection: bool = False,
-) -> list[ReportLineString]:
-    _validate_file_args(input_file_path)
+    overwrite: bool = False,
+) -> tuple[bool, str, int]:
+    if density_check_report_path is None:
+        density_check_report_path = os.path.join(
+            tempfile.mkdtemp(), "check-density-report.json"
+        )
+
+    _validate_dependent_file_args(input_file_path, density_check_report_path, overwrite)
 
     with open(input_file_path) if input_file_path != "-" else sys.stdin as src:
         geojson_obj = get_geojson_obj(src)
@@ -118,8 +115,35 @@ def check_density_file(
             geojson_obj, density_check_fun
         )
 
-    flat_result: list[ReportLineString] = list(flatten(result))
-    return flat_result
+    flat_result: list[ReportLineString] = list(
+        filter(lambda x: x is not None, flatten(result))
+    )
+    report_fc = report_line_string_to_geojson(flat_result, src_crs)
+
+    check_status = len(report_fc.features) == 0
+    if not check_status:
+        with open(density_check_report_path, "w") as f:
+            f.write(report_fc.model_dump_json(indent=4, exclude_none=True))
+    return (check_status, density_check_report_path, len(report_fc.features))
+
+
+def report_line_string_to_geojson(
+    report: list[ReportLineString], src_crs_auth_code: str | None
+) -> CrsFeatureCollection:
+    features = [
+        Feature(
+            type="Feature",
+            properties={"segment_length": x[0]},
+            geometry=LineString(type="LineString", coordinates=list(x[1])),
+        )
+        for x in report
+    ]
+    result = CrsFeatureCollection(
+        features=features, type="FeatureCollection", name="density-check-report"
+    )
+    if src_crs_auth_code is not None:
+        result.set_crs_auth_code(src_crs_auth_code)
+    return result
 
 
 def densify_file(  # noqa: PLR0913
@@ -133,8 +157,8 @@ def densify_file(  # noqa: PLR0913
     """_summary_
 
     Arguments:
-        input_file_path
-        output_file_path
+        input_file_path: assumes file exists otherwise raises FileNotFoundError
+        output_file_path: assumes directory of output_file_path exists
 
     Keyword Arguments:
         layer -- layer name, when no specified and multilayer file, first layer will be used (default: {None})
@@ -147,7 +171,7 @@ def densify_file(  # noqa: PLR0913
         pyproj.exceptions.CRSError: when crs cannot be found by pyproj
 
     """
-    _validate_file_args(input_file_path, output_file_path, overwrite)
+    _validate_dependent_file_args(input_file_path, output_file_path, overwrite)
     src: TextIO
     with open(input_file_path) if input_file_path != "-" else sys.stdin as src:
         geojson_obj = get_geojson_obj(src)
@@ -338,7 +362,7 @@ def _interpolate_src_proj(
     if dist <= densify_config.max_segment_length:
         return []
     else:
-        new_points = []
+        new_points: list[tuple[float, float] | tuple[float, float, float]] = []
 
         (
             nr_points,
@@ -352,7 +376,7 @@ def _interpolate_src_proj(
                 new_max_segment_length * (i + 1)
             )
             p = tuple(p_point.coords[0])
-            new_points.append(p)
+            new_points.append(p)  # type: ignore
         return [
             *new_points,
         ]
@@ -384,23 +408,21 @@ def get_geojson_obj(src: TextIO) -> GeojsonObject:
 def check_density_geometry_coordinates(
     geometry_coordinates: GeojsonCoordinates,
     densify_config: DenseConfig,
-    indices: list[int] | None = None,
+    # indices: list[int] | None = None,
 ) -> Nested[ReportLineString]:
-    if indices is None:
-        indices = []
+    # if indices is None:
+    #     indices = []
 
     if isinstance(geometry_coordinates, tuple):
         return [None]
 
     if _is_linestring_geom(geometry_coordinates):
         linestring_coords = cast(LineStringCoords, geometry_coordinates)
-        linestring_report = _check_density_linestring(
-            linestring_coords, densify_config, indices
-        )
+        linestring_report = _check_density_linestring(linestring_coords, densify_config)
         return linestring_report
     else:
         return [
-            check_density_geometry_coordinates(e, densify_config, [*indices, i])
+            check_density_geometry_coordinates(e, densify_config)
             for i, e in enumerate(geometry_coordinates)
         ]
 
@@ -466,7 +488,7 @@ def flatten(container: Nested) -> Iterable:
 def _check_density_linestring(
     linestring: LineStringCoords,
     densify_config: DenseConfig,
-    indices: list[int],
+    # indices: list[int],
 ) -> list[ReportLineString]:
     result = []
 
@@ -502,8 +524,7 @@ def _check_density_linestring(
                 )
             linesegment_dist = geod_dist
         if linesegment_dist > (densify_config.max_segment_length + 0.001):
-            report_indices = [*indices, k]
-            result.append((report_indices, linesegment_dist))
+            result.append((linesegment_dist, (a, b)))
     return result
 
 
@@ -557,66 +578,6 @@ def _transform_linestrings_in_geometry_coordinates(
             )
             for e in geometry_coordinates
         ]
-
-
-def _validate_file_args(
-    input_file_path: str,
-    output_file_path: str | None = None,
-    overwrite: bool = False,
-) -> None:
-    _, input_file_ext = os.path.splitext(input_file_path)
-    if output_file_path is not None:
-        _, output_file_ext = os.path.splitext(output_file_path)
-
-    if output_file_path is not None and (
-        input_file_path == output_file_path and input_file_path != "-"
-    ):
-        raise GeodenseError(
-            f"input_file and output_file arguments must be different, input_file: {input_file_path}, output_file: {output_file_path}"
-        )
-    unsupported_file_extension_msg = "unsupported file extension of {input_file}, received: {ext}, expected one of: {supported_ext}"
-
-    if (
-        input_file_path != "-"
-        and input_file_ext not in SUPPORTED_FILE_FORMATS["GeoJSON"]
-    ):
-        raise GeodenseError(
-            unsupported_file_extension_msg.format(
-                input_file="input-file",
-                ext=input_file_ext,
-                supported_ext=", ".join(SUPPORTED_FILE_FORMATS["GeoJSON"]),
-            )
-        )
-    if (
-        output_file_path is not None
-        and output_file_path != "-"
-        and output_file_ext not in SUPPORTED_FILE_FORMATS["GeoJSON"]
-    ):
-        raise GeodenseError(
-            unsupported_file_extension_msg.format(
-                input_file="output-file",
-                ext=output_file_ext,
-                supported_ext=SUPPORTED_FILE_FORMATS["GeoJSON"],
-            )
-        )
-
-    if input_file_path != "-" and not os.path.exists(input_file_path):
-        raise GeodenseError(f"input_file {input_file_path} does not exist")
-
-    if (
-        output_file_path is not None
-        and output_file_path != "-"
-        and not os.path.exists(os.path.realpath(os.path.dirname(output_file_path)))
-    ):
-        raise GeodenseError(
-            f"target directory of output_file {output_file_path} does not exist"
-        )
-
-    if output_file_path is not None and output_file_path != "-":
-        if os.path.exists(output_file_path) and not overwrite:
-            raise GeodenseError(f"output_file {output_file_path} already exists")
-        elif os.path.exists(output_file_path) and overwrite:
-            os.remove(output_file_path)
 
 
 def _get_intermediate_nr_points_and_segment_length(
@@ -673,9 +634,9 @@ def _add_vertices_to_line_segment(
             ]
         )
 
-    linestring[coord_index] = _round_coordinates(linestring[coord_index], prec)
-    linestring[coord_index + 1] = _round_coordinates(linestring[coord_index + 1], prec)
-    linestring[coord_index + 1 : coord_index + 1] = p
+    linestring[coord_index] = _round_coordinates(linestring[coord_index], prec)  # type: ignore
+    linestring[coord_index + 1] = _round_coordinates(linestring[coord_index + 1], prec)  # type: ignore
+    linestring[coord_index + 1 : coord_index + 1] = p  # type: ignore
     return len(p)
 
 

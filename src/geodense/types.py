@@ -43,4 +43,4 @@ GeojsonCoordinates: TypeAlias = (
 
 Nested: TypeAlias = Sequence[T | None | "Nested"]
 
-ReportLineString = tuple[list[int], float]
+ReportLineString = tuple[float, tuple[Position, Position]]

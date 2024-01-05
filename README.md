@@ -62,7 +62,7 @@ python3 -m pytest tests/
 Check test coverage:
 
 ```sh
-python3 -m coverage run -p --source=src/geodense -m pytest -v tests && python3 -m coverage report
+python3 -m coverage run -p --source=src/geodense -m pytest -v tests && python3 -m coverage report --data-file $(ls -t  .coverage.* | head -1)
 ```
 
 
