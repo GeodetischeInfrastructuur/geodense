@@ -53,6 +53,23 @@ def densify_geojson_object(geojson_obj: GeojsonObject, dc: DenseConfig) -> None:
     _ = apply_function_on_geojson_geometries(geojson_obj, geom_densify_fun)
 
 
+def density_check_geojson_object(
+    geojson_obj: GeojsonObject, dc: DenseConfig
+) -> CrsFeatureCollection:
+    _geom_type_check(geojson_obj, "density-check")
+    density_check_fun = get_density_check_fun(dc)
+    result: Nested[ReportLineString] = apply_function_on_geojson_geometries(
+        geojson_obj, density_check_fun
+    )
+    flat_result: list[ReportLineString] = list(
+        filter(lambda x: x is not None, flatten(result))
+    )
+    report_fc = report_line_string_to_geojson(
+        flat_result, ":".join(dc.src_crs.to_authority())
+    )
+    return report_fc
+
+
 def get_density_check_fun(
     densify_config: DenseConfig,
 ) -> Callable:
@@ -104,23 +121,16 @@ def check_density_file(  # noqa: PLR0913
         geojson_src_crs = _get_crs_geojson(
             geojson_obj, input_file_path, src_crs, has_3d_coords
         )
-
         config = DenseConfig(
             CRS.from_authority(*geojson_src_crs.split(":")),
             max_segment_length,
             in_projection=in_projection,
         )
-        density_check_fun = get_density_check_fun(config)
-        result: Nested[ReportLineString] = apply_function_on_geojson_geometries(
-            geojson_obj, density_check_fun
-        )
+        report_fc = density_check_geojson_object(geojson_obj, config)
 
-    flat_result: list[ReportLineString] = list(
-        filter(lambda x: x is not None, flatten(result))
-    )
-    report_fc = report_line_string_to_geojson(flat_result, src_crs)
+    failed_segment_count = len(report_fc.features)
+    check_status = failed_segment_count == 0
 
-    check_status = len(report_fc.features) == 0
     if not check_status:
         with open(density_check_report_path, "w") as f:
             f.write(report_fc.model_dump_json(indent=4, exclude_none=True))
