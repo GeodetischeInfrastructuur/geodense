@@ -38,8 +38,8 @@ from geodense.types import (
 
 TWO_DIMENSIONAL = 2
 THREE_DIMENSIONAL = 3
-DEFAULT_CRS_2D = "EPSG:4326"
-DEFAULT_CRS_3D = "EPSG:4979"
+DEFAULT_CRS_2D = "OGC:CRS84"
+DEFAULT_CRS_3D = "OGC:CRS84h"
 SUPPORTED_FILE_FORMATS = {
     "GeoJSON": [".geojson", ".json"],
 }
@@ -61,7 +61,9 @@ def density_check_geojson_object(
     result: Nested[ReportLineString] = apply_function_on_geojson_geometries(
         geojson_obj, density_check_fun
     )
-    flat_result: list[ReportLineString] = list(
+    flat_result: list[
+        ReportLineString
+    ] = list(  # filter out None values, these occur when point geometries are part of input
         filter(lambda x: x is not None, flatten(result))
     )
     report_fc = report_line_string_to_geojson(

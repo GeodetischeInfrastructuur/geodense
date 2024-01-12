@@ -372,7 +372,7 @@ def test_densify_file_json_no_crs_outputs_message_stderr(caplog, test_dir, tmpdi
     output_file = os.path.join(tmpdir, "geometry.json")
     densify_file(input_file, output_file)
     output = caplog.text
-    expected_warning = r"WARNING .* unable to determine source CRS for file .*geometry-4326-no-crs.json, assumed CRS is EPSG:4326\n"
+    expected_warning = r"WARNING .* unable to determine source CRS for file .*geometry-4326-no-crs.json, assumed CRS is OGC:CRS84\n"
     assert re.match(
         expected_warning, output
     ), f"stderr expected message is: {expected_warning}, actual message was: {output}"
