@@ -34,7 +34,7 @@ def test_3d_coords_2d_crs_raises_warning(test_dir, capsys):
         (
             "geometry-4326-no-crs.json",
             None,
-            r"\[WARNING\] unable to determine source CRS for file .*, assumed CRS is EPSG:4326\n",
+            r"\[WARNING\] unable to determine source CRS for file .*, assumed CRS is OGC:CRS84\n",
         ),
         ("linestring_feature.json", "EPSG:7415", r""),
     ],
@@ -65,7 +65,7 @@ def test_2d_coords_3d_crs_raises_no_warning(
         (
             "geometry-4326-no-crs.json",
             None,
-            r"\[WARNING\] unable to determine source CRS for file .*, assumed CRS is EPSG:4326\n",
+            r"\[WARNING\] unable to determine source CRS for file .*, assumed CRS is OGC:CRS84\n",
         ),
         ("linestring_feature.json", "EPSG:7415", r""),
     ],
