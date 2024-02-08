@@ -85,7 +85,7 @@ def check_density_cmd(  # noqa: PLR0913
         sys.exit(0)
     else:
         print(
-            f"{nr_line_segments} linesegments in data exceeded max-segment-length {max_segment_length}, linesegment geometries written to GeoJSON FeatureCollection: {density_check_report_path}"
+            f"{nr_line_segments} line segments in data exceed max-segment-length {max_segment_length}, line segment geometries written to GeoJSON FeatureCollection: {density_check_report_path}"
         )
         sys.exit(1)
 
@@ -110,7 +110,7 @@ def main() -> None:
     densify_parser = subparsers.add_parser(
         "densify",
         formatter_class=parser.formatter_class,
-        description="Densify (multi)polygon and (multi)linestring geometries along the geodesic (ellipsoidal great-circle), in base CRS (geographic) in case of projected source CRS.Supports GeoJSON as input file format. When supplying 3D coordinates, the height is linear interpolated for both geographic CRSs with ellipsoidal height and for compound CRSs with physical height.",
+        description="Densify (multi)polygon and (multi)linestring geometries along the geodesic (ellipsoidal great-circle), in base CRS (geographic) in case of projected source CRS. Supports GeoJSON as input file format. When supplying 3D coordinates, the height is linear interpolated for both geographic CRSs with ellipsoidal height and for compound CRSs with physical height.",
     )
     densify_parser.add_argument(
         "input_file",
@@ -169,7 +169,7 @@ def main() -> None:
         formatter_class=parser.formatter_class,
         description="Check density of (multi)polygon and (multi)linestring geometries based on geodesic (ellipsoidal great-circle) distance, in base CRS (geographic) in case of projected source CRS. \
         When result of check is OK the program will return with exit code 0, when result \
-        is FAILED the program will return with exit code 1. The density-check report is a GeoJSON FeatureCollection containing linesegments exceeding the max-segment-length treshold.",
+        is FAILED the program will return with exit code 1. The density-check report is a GeoJSON FeatureCollection containing line segments exceeding the max-segment-length treshold.",
     )
     check_density_parser.add_argument(
         "input_file",
