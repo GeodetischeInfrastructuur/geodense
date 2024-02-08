@@ -65,7 +65,7 @@
             <a id="nextFileLink" class="nav" href="d_2556654284aef078_models_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.4.1">coverage.py v7.4.1</a>,
-            created at 2024-02-08 15:38 +0000
+            created at 2024-02-08 15:40 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"/>
@@ -167,7 +167,7 @@
     <p class="run"><span class="n"><a id="t85" href="#t85">85</a></span><span class="t">        <span class="nam">sys</span><span class="op">.</span><span class="nam">exit</span><span class="op">(</span><span class="num">0</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t86" href="#t86">86</a></span><span class="t">    <span class="key">else</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t87" href="#t87">87</a></span><span class="t">        <span class="nam">print</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t88" href="#t88">88</a></span><span class="t">            <span class="str">f"{nr_line_segments} linesegments in data exceeded max-segment-length {max_segment_length}, linesegment geometries written to GeoJSON FeatureCollection: {density_check_report_path}"</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t88" href="#t88">88</a></span><span class="t">            <span class="str">f"{nr_line_segments} line segments in data exceed max-segment-length {max_segment_length}, line segment geometries written to GeoJSON FeatureCollection: {density_check_report_path}"</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t89" href="#t89">89</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t90" href="#t90">90</a></span><span class="t">        <span class="nam">sys</span><span class="op">.</span><span class="nam">exit</span><span class="op">(</span><span class="num">1</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t91" href="#t91">91</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -192,7 +192,7 @@
     <p class="run"><span class="n"><a id="t110" href="#t110">110</a></span><span class="t">    <span class="nam">densify_parser</span> <span class="op">=</span> <span class="nam">subparsers</span><span class="op">.</span><span class="nam">add_parser</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t111" href="#t111">111</a></span><span class="t">        <span class="str">"densify"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t112" href="#t112">112</a></span><span class="t">        <span class="nam">formatter_class</span><span class="op">=</span><span class="nam">parser</span><span class="op">.</span><span class="nam">formatter_class</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t113" href="#t113">113</a></span><span class="t">        <span class="nam">description</span><span class="op">=</span><span class="str">"Densify (multi)polygon and (multi)linestring geometries along the geodesic (ellipsoidal great-circle), in base CRS (geographic) in case of projected source CRS.Supports GeoJSON as input file format. When supplying 3D coordinates, the height is linear interpolated for both geographic CRSs with ellipsoidal height and for compound CRSs with physical height."</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t113" href="#t113">113</a></span><span class="t">        <span class="nam">description</span><span class="op">=</span><span class="str">"Densify (multi)polygon and (multi)linestring geometries along the geodesic (ellipsoidal great-circle), in base CRS (geographic) in case of projected source CRS. Supports GeoJSON as input file format. When supplying 3D coordinates, the height is linear interpolated for both geographic CRSs with ellipsoidal height and for compound CRSs with physical height."</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t114" href="#t114">114</a></span><span class="t">    <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t115" href="#t115">115</a></span><span class="t">    <span class="nam">densify_parser</span><span class="op">.</span><span class="nam">add_argument</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t116" href="#t116">116</a></span><span class="t">        <span class="str">"input_file"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -251,7 +251,7 @@
     <p class="pln"><span class="n"><a id="t169" href="#t169">169</a></span><span class="t">        <span class="nam">formatter_class</span><span class="op">=</span><span class="nam">parser</span><span class="op">.</span><span class="nam">formatter_class</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t170" href="#t170">170</a></span><span class="t">        <span class="nam">description</span><span class="op">=</span><span class="str">"Check density of (multi)polygon and (multi)linestring geometries based on geodesic (ellipsoidal great-circle) distance, in base CRS (geographic) in case of projected source CRS. \</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t171" href="#t171">171</a></span><span class="t"><span class="str">        When result of check is OK the program will return with exit code 0, when result \</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t172" href="#t172">172</a></span><span class="t"><span class="str">        is FAILED the program will return with exit code 1. The density-check report is a GeoJSON FeatureCollection containing linesegments exceeding the max-segment-length treshold."</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t172" href="#t172">172</a></span><span class="t"><span class="str">        is FAILED the program will return with exit code 1. The density-check report is a GeoJSON FeatureCollection containing line segments exceeding the max-segment-length treshold."</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t173" href="#t173">173</a></span><span class="t">    <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t174" href="#t174">174</a></span><span class="t">    <span class="nam">check_density_parser</span><span class="op">.</span><span class="nam">add_argument</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t175" href="#t175">175</a></span><span class="t">        <span class="str">"input_file"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -374,7 +374,7 @@
             <a id="nextFileLink" class="nav" href="d_2556654284aef078_models_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.4.1">coverage.py v7.4.1</a>,
-            created at 2024-02-08 15:38 +0000
+            created at 2024-02-08 15:40 +0000
         </p>
     </div>
 </footer>
