@@ -2,8 +2,8 @@ from pyproj import CRS as ProjCrs  # noqa: N811
 from pyproj import Transformer
 
 DEFAULT_MAX_SEGMENT_LENGTH = 200
-DEFAULT_PRECISION_DEGREES = 9
-DEFAULT_PRECISION_METERS = 4
+DEFAULT_PRECISION_DEGREES = 9 # digits
+DEFAULT_PRECISION_METERS = 4 # digits
 
 
 class GeodenseError(Exception):
@@ -24,7 +24,7 @@ class DenseConfig:
         if self.src_crs.is_geographic and in_projection:
             raise GeodenseError(
                 f"in_projection can only be used with \
-projected coordinates reference systems, crs {self.src_crs} is a geographic crs"
+projected coordinate reference systems, crs {self.src_crs} is a geographic crs"
             )
         self.back_transformer = None
         if self.src_crs.is_geographic:
