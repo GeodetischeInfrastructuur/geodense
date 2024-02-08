@@ -71,9 +71,9 @@ def test_linestring_d10_no_op(linestring_d10_feature_gj):
     ft: Feature = linestring_d10_feature_gj
     ft_t: Feature = ft.model_copy(deep=True)
     ft_t_in_proj: Feature = ft.model_copy(deep=True)
-    ft_t.properties[
-        "foo"
-    ] = "bar"  # to differentiate between original ft and ft_t, to prevent we are testing the same object...
+    ft_t.properties["foo"] = (
+        "bar"  # to differentiate between original ft and ft_t, to prevent we are testing the same object...
+    )
 
     c = DenseConfig(
         pyproj.CRS.from_epsg(28992), 15

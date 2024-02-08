@@ -90,9 +90,10 @@ def test_densify_file_unsupported_file_format(
     output_file = os.path.join(tempfile.mkdtemp(), output_file)
 
     expected_exit = expectation[0]
-    with ArgvContext(
-        "geodense", "densify", input_file, output_file
-    ), expected_exit as cm:
+    with (
+        ArgvContext("geodense", "densify", input_file, output_file),
+        expected_exit as cm,
+    ):
         main()
     expected_exit_code = expectation[1]
 
@@ -138,11 +139,14 @@ def test_cli_densify_shows_outputs_error_returns_1(caplog, tmpdir, test_dir):
     with mock.patch.object(geodense.main, "densify_file") as get_mock:
         get_mock.side_effect = GeodenseError("FOOBAR")
 
-        with pytest.raises(SystemExit) as cm, ArgvContext(
-            "geodense",
-            "densify",
-            os.path.join(test_dir, "data", "linestrings.json"),
-            os.path.join(tmpdir, "linestrings.json"),
+        with (
+            pytest.raises(SystemExit) as cm,
+            ArgvContext(
+                "geodense",
+                "densify",
+                os.path.join(test_dir, "data", "linestrings.json"),
+                os.path.join(tmpdir, "linestrings.json"),
+            ),
         ):
             main()
 
@@ -161,12 +165,15 @@ def test_cli_check_density_shows_outputs_error_returns_1(caplog, test_dir):
     with mock.patch.object(geodense.main, "check_density_file") as get_mock:
         get_mock.side_effect = GeodenseError("FOOBAR")
 
-        with pytest.raises(SystemExit) as cm, ArgvContext(
-            "geodense",
-            "check-density",
-            os.path.join(test_dir, "data", "linestrings.json"),
-            "--max-segment-length",
-            str(DEFAULT_MAX_SEGMENT_LENGTH),
+        with (
+            pytest.raises(SystemExit) as cm,
+            ArgvContext(
+                "geodense",
+                "check-density",
+                os.path.join(test_dir, "data", "linestrings.json"),
+                "--max-segment-length",
+                str(DEFAULT_MAX_SEGMENT_LENGTH),
+            ),
         ):
             main()
 
