@@ -2,8 +2,8 @@ from pyproj import CRS as ProjCrs  # noqa: N811
 from pyproj import Transformer
 
 DEFAULT_MAX_SEGMENT_LENGTH = 200
-DEFAULT_PRECISION_DEGREES = 9 # digits
-DEFAULT_PRECISION_METERS = 4 # digits
+DEFAULT_PRECISION_DEGREES = 9  # digits
+DEFAULT_PRECISION_METERS = 4  # digits
 
 
 class GeodenseError(Exception):
