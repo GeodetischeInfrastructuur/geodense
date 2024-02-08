@@ -11,15 +11,18 @@ def test_3d_coords_2d_crs_raises_warning(test_dir, capsys):
     in_file = "linestring_3d_feature.json"
     in_filepath = f"{test_dir}/data/{in_file}"
     max_segment_length = "5000"
-    with ArgvContext(
-        "geodense",
-        "check-density",
-        in_filepath,
-        "--max-segment-length",
-        max_segment_length,
-        "--src-crs",
-        "EPSG:28992",
-    ), pytest.raises(SystemExit):
+    with (
+        ArgvContext(
+            "geodense",
+            "check-density",
+            in_filepath,
+            "--max-segment-length",
+            max_segment_length,
+            "--src-crs",
+            "EPSG:28992",
+        ),
+        pytest.raises(SystemExit),
+    ):
         main()
     _, err = capsys.readouterr()
     assert (

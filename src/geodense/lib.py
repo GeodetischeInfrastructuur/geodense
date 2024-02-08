@@ -61,10 +61,10 @@ def density_check_geojson_object(
     result: Nested[ReportLineString] = apply_function_on_geojson_geometries(
         geojson_obj, density_check_fun
     )
-    flat_result: list[
-        ReportLineString
-    ] = list(  # filter out None values, these occur when point geometries are part of input
-        filter(lambda x: x is not None, flatten(result))
+    flat_result: list[ReportLineString] = (
+        list(  # filter out None values, these occur when point geometries are part of input
+            filter(lambda x: x is not None, flatten(result))
+        )
     )
     report_fc = report_line_string_to_geojson(
         flat_result, ":".join(dc.src_crs.to_authority())
@@ -199,19 +199,21 @@ def densify_file(  # noqa: PLR0913
         densify_geojson_object(geojson_obj, config)
         if src_crs is not None and isinstance(geojson_obj, CrsFeatureCollection):
             geojson_obj.set_crs_auth_code(src_crs)
-        with open(
-            output_file_path, "w"
-        ) if output_file_path != "-" else sys.stdout as out_f:
+        with (
+            open(output_file_path, "w") if output_file_path != "-" else sys.stdout
+        ) as out_f:
             geojson_obj_model: BaseModel = cast(BaseModel, geojson_obj)
 
             out_f.write(geojson_obj_model.model_dump_json(indent=1, exclude_none=True))
 
 
 def apply_function_on_geojson_geometries(  # noqa: C901
-    body: Feature
-    | CrsFeatureCollection
-    | GeojsonGeomNoGeomCollection
-    | GeometryCollection,
+    body: (
+        Feature
+        | CrsFeatureCollection
+        | GeojsonGeomNoGeomCollection
+        | GeometryCollection
+    ),
     callback: Callable[[GeojsonGeomNoGeomCollection], Nested | None],
 ) -> Nested:
     result: Nested = []
