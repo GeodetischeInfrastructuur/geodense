@@ -271,7 +271,7 @@ def test_densify_file_in_proj_exc(tmpdir, test_dir):
     with pytest.raises(
         GeodenseError,
         match=(
-            r"in_projection can only be used with projected coordinates "
+            r"in_projection can only be used with projected coordinate "
             r"reference systems, crs .+ is a geographic crs"
         ),
     ):
