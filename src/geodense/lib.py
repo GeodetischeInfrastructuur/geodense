@@ -16,7 +16,7 @@ from geojson_pydantic import (
     MultiPoint,
     MultiPolygon,
     Point,
-    Polygon    
+    Polygon,
 )
 from geojson_pydantic.geometries import Geometry
 from geojson_pydantic.types import LineStringCoords, Position, Position2D
@@ -369,8 +369,8 @@ def _interpolate_src_proj(
     if (
         not three_dimensional_points
     ):  # if not both three dimensional points, ensure both points are two dimensional
-        a = Position2D(*a[:2]) 
-        b = Position2D(*b[:2]) 
+        a = Position2D(*a[:2])
+        b = Position2D(*b[:2])
 
     dist = _get_cartesian_distance(a, b)
     if dist <= densify_config.max_segment_length:
