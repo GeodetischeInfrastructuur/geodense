@@ -16,10 +16,10 @@ from geojson_pydantic import (
     MultiPoint,
     MultiPolygon,
     Point,
-    Polygon,
+    Polygon    
 )
 from geojson_pydantic.geometries import Geometry
-from geojson_pydantic.types import LineStringCoords, Position
+from geojson_pydantic.types import LineStringCoords, Position, Position2D
 from pydantic import BaseModel
 from pyproj import CRS
 from shapely import LineString as ShpLineString
@@ -349,7 +349,7 @@ def _interpolate_geodesic(
             ]
         else:
             return [
-                optional_back_transform(lon, lat)
+                Position2D(*optional_back_transform(lon, lat))
                 for lon, lat in zip(r.lons, r.lats, strict=True)
             ]
 
@@ -369,14 +369,15 @@ def _interpolate_src_proj(
     if (
         not three_dimensional_points
     ):  # if not both three dimensional points, ensure both points are two dimensional
-        a = a[:2]
-        b = b[:2]
+        a = Position2D(*a[:2]) 
+        b = Position2D(*b[:2]) 
 
     dist = _get_cartesian_distance(a, b)
     if dist <= densify_config.max_segment_length:
         return []
     else:
-        new_points: list[tuple[float, float] | tuple[float, float, float]] = []
+        # new_points: list[tuple[float, float] | tuple[float, float, float]] = []
+        new_points: LineStringCoords = []
 
         (
             nr_points,
@@ -510,11 +511,15 @@ def _check_density_linestring(
         a: Position = linestring[k]
         b: Position = linestring[k + 1]
 
-        a_2d: tuple[float, float] = tuple(a[0:2])  # type: ignore
-        b_2d: tuple[float, float] = tuple(b[0:2])  # type: ignore
+        a_2d: Position = Position(*a[0:2])  # type: ignore
+        b_2d: Position = Position(*b[0:2])  # type: ignore
+
+        a_t: Position
+        b_t: Position
 
         if densify_config.in_projection:
             linesegment_dist = _get_cartesian_distance(a_2d, b_2d)
+
         else:
             if (
                 densify_config.src_crs.is_projected
@@ -524,8 +529,8 @@ def _check_density_linestring(
                     raise GeodenseError(
                         "transformer cannot be None when src_crs.is_projected=True"
                     )
-                a_t = transformer.transform(*a_2d)
-                b_t = transformer.transform(*b_2d)
+                a_t = Position2D(*transformer.transform(*a_2d))
+                b_t = Position2D(*transformer.transform(*b_2d))
             else:  # src_crs is geographic do not transform
                 a_t, b_t = (a_2d, b_2d)
             g = densify_config.geod
