@@ -511,8 +511,8 @@ def _check_density_linestring(
         a: Position = linestring[k]
         b: Position = linestring[k + 1]
 
-        a_2d: Position = Position(*a[0:2])  # type: ignore
-        b_2d: Position = Position(*b[0:2])  # type: ignore
+        a_2d: Position = Position2D(*a[0:2])  # type: ignore
+        b_2d: Position = Position2D(*b[0:2])  # type: ignore
 
         a_t: Position
         b_t: Position
