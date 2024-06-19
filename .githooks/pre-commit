@@ -55,6 +55,6 @@ black .
 
 command_available "ruff"
 print_message "running ruff linting with --fix" 1 "INFO" true
-ruff --fix .
+ruff check --fix .
 
 git add -u #  stages modifications and deletions, without new files

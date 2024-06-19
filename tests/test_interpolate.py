@@ -1,28 +1,39 @@
+from copy import deepcopy
+
 import pytest
 from geodense.lib import (
+    THREE_DIMENSIONAL,
     _add_vertices_to_line_segment,
-    _get_line_segment_densify_fun,
-    _interpolate_src_proj,
+    densify_line_segment,
+    interpolate_src_proj,
 )
 from geodense.models import (
     DEFAULT_PRECISION_DEGREES,
     DEFAULT_PRECISION_METERS,
     DenseConfig,
 )
+from geojson_pydantic.types import Position2D, Position3D
 from pyproj import CRS
 
 
+def tuple_2_pos(tup):
+    result = Position2D(longitude=tup[0], latitude=tup[1])
+    if len(tup) == THREE_DIMENSIONAL:
+        result = Position3D(*result, altitude=tup[2])
+    return result
+
+
 def test_interpolate_src_proj_no_op():
-    points = [(0, 0), (10, 10)]  # 14.142
+    points = [tuple_2_pos(x) for x in [(0, 0), (10, 10)]]  # 14.142
     c = DenseConfig(CRS.from_epsg(28992), 20)
-    points_t = _interpolate_src_proj(*points, c)
+    points_t = interpolate_src_proj(*points, c)
     assert points_t == [], f"expected points_t to be empty, received: {points_t}"
 
 
 def test_interpolate_src_proj():
-    points = [(0, 0), (10, 10)]  # 14.142
+    points = [tuple_2_pos(x) for x in [(0, 0), (10, 10)]]  # 14.142
     c = DenseConfig(CRS.from_epsg(28992), 10)
-    points_t = _interpolate_src_proj(*points, c)
+    points_t = interpolate_src_proj(*points, c)
     expected_nr_of_points = 1
 
     assert (
@@ -31,19 +42,24 @@ def test_interpolate_src_proj():
 
 
 def test_add_vertices_exceeding_max_segment_length():
-    linestring = [(0, 0), (10, 10), (20, 20)]
-    linestring_t = linestring
+    linestring = [tuple_2_pos(x) for x in [(0, 0), (10, 10), (20, 20)]]
+    linestring_origin = deepcopy(linestring)
 
     c = DenseConfig(CRS.from_epsg(28992), 10, True)
-    line_segment_densify = _get_line_segment_densify_fun(c)
-    line_segment_densify(linestring_t)
-    assert len(linestring_t) == 5  # noqa: PLR2004
-    assert linestring_t == [(0, 0), (5.0, 5.0), (10, 10), (15.0, 15.0), (20, 20)]
+
+    densify_line_segment(c, linestring)
+
+    assert linestring != linestring_origin
+    assert len(linestring) == 5  # noqa: PLR2004
+    assert linestring == [(0, 0), (5.0, 5.0), (10, 10), (15.0, 15.0), (20, 20)]
 
 
 def test_interpolate_round_projected():
     """Note precision is only reduced by round()"""
-    points_proj = [(0.12345678, 0.12345678), (10.12345678, 10.12345678)]
+    points_proj = [
+        tuple_2_pos(x) for x in [(0.12345678, 0.12345678), (10.12345678, 10.12345678)]
+    ]
+
     c = DenseConfig(CRS.from_epsg(28992), 10, True)
     _add_vertices_to_line_segment(points_proj, 0, c)
 
@@ -59,9 +75,13 @@ def test_interpolate_round_projected():
 def test_interpolate_round_geographic():
     """Note precision is only reduced by round()"""
     points_geog = [
-        (0.1234567891011, 0.1234567891011),
-        (10.1234567891011, 10.1234567891011),
+        tuple_2_pos(x)
+        for x in [
+            (0.1234567891011, 0.1234567891011),
+            (10.1234567891011, 10.1234567891011),
+        ]
     ]
+
     c = DenseConfig(CRS.from_epsg(4258), 10)
     _add_vertices_to_line_segment(points_geog, 0, c)
 
@@ -111,9 +131,9 @@ def test_interpolate_round_geographic():
     ],
 )
 def test_interpolate_3d(linestring, in_proj, expectation):
-    linestring_t = linestring[:]  # clone list with slicing
+    linestring = [tuple_2_pos(x) for x in linestring]
+
     c = DenseConfig(CRS.from_epsg(7415), 10, in_proj)
 
-    line_segment_densify = _get_line_segment_densify_fun(c)
-    line_segment_densify(linestring_t)
-    assert linestring_t == expectation
+    densify_line_segment(c, linestring)
+    assert linestring == expectation
