@@ -47,7 +47,7 @@ def test_check_density_cmd_exit_0(test_dir):
     input_file = os.path.join(test_dir, "data", "polygons.json")
     with pytest.raises(SystemExit) as cm:
         check_density_cmd(input_file, 20000)
-    assert cm.type == SystemExit
+    assert cm.type is SystemExit
     expected_exit_code = 0
     assert (
         cm.value.code == expected_exit_code
@@ -61,7 +61,7 @@ def test_check_density_cmd_exit_1_when_result_not_ok(test_dir):
     input_file = os.path.join(test_dir, "data", "polygons.json")
     with pytest.raises(SystemExit) as cm:
         check_density_cmd(input_file, 20000, "")
-    assert cm.type == SystemExit
+    assert cm.type is SystemExit
     expected_exit_code = 1
     assert (
         cm.value.code == expected_exit_code
@@ -98,7 +98,7 @@ def test_densify_file_unsupported_file_format(
     expected_exit_code = expectation[1]
 
     if expected_exit_code > 0:
-        assert cm.type == SystemExit
+        assert cm.type is SystemExit
         assert (
             cm.value.code == expected_exit_code
         ), f"expected check_density_cmd call to exit with exit code {expected_exit_code} was {cm.value.code}"
@@ -150,7 +150,7 @@ def test_cli_densify_shows_outputs_error_returns_1(caplog, tmpdir, test_dir):
         ):
             main()
 
-        assert cm.type == SystemExit
+        assert cm.type is SystemExit
         expected_exit_code = 1
         assert (
             cm.value.code == expected_exit_code
@@ -177,7 +177,7 @@ def test_cli_check_density_shows_outputs_error_returns_1(caplog, test_dir):
         ):
             main()
 
-        assert cm.type == SystemExit
+        assert cm.type is SystemExit
         expected_exit_code = 1
         assert (
             cm.value.code == expected_exit_code
