@@ -6,7 +6,8 @@ import sys
 import tempfile
 from collections.abc import Callable, Iterable, Sequence
 from enum import Enum
-from typing import Any, Literal, TextIO, cast
+from functools import partial
+from typing import Literal, TextIO, cast
 
 from geojson_pydantic import (
     Feature,
@@ -19,7 +20,7 @@ from geojson_pydantic import (
     Polygon,
 )
 from geojson_pydantic.geometries import Geometry
-from geojson_pydantic.types import LineStringCoords, Position
+from geojson_pydantic.types import LineStringCoords, Position, Position2D, Position3D
 from pydantic import BaseModel
 from pyproj import CRS
 from shapely import LineString as ShpLineString
@@ -47,40 +48,112 @@ SUPPORTED_FILE_FORMATS = {
 logger = logging.getLogger("geodense")
 
 
-def densify_geojson_object(geojson_obj: GeojsonObject, dc: DenseConfig) -> None:
-    _geom_type_check(geojson_obj, "densify")
-    geom_densify_fun = _get_geom_densify_fun(dc)
-    _ = apply_function_on_geojson_geometries(geojson_obj, geom_densify_fun)
+class InfValCoordinateError(Exception):
+    pass
 
 
-def density_check_geojson_object(
-    geojson_obj: GeojsonObject, dc: DenseConfig
-) -> CrsFeatureCollection:
-    _geom_type_check(geojson_obj, "density-check")
-    density_check_fun = get_density_check_fun(dc)
-    result: Nested[ReportLineString] = apply_function_on_geojson_geometries(
-        geojson_obj, density_check_fun
+def densify_geojson_object(
+    densify_config: DenseConfig, geojson_obj: GeojsonObject
+) -> GeojsonObject:
+    validate_geom_type(geojson_obj, "densify")
+    _densify_geometry = partial(densify_geometry, densify_config)
+    return traverse_geojson_geometries(geojson_obj, _densify_geometry)
+
+
+def densify_geometry(
+    densify_config: DenseConfig, geometry: GeojsonGeomNoGeomCollection
+) -> None:
+    _densify_line_segment = partial(densify_line_segment, densify_config)
+    result: GeojsonCoordinates = traverse_linestrings_in_coordinates(
+        geometry.coordinates, _densify_line_segment
     )
+    geometry.coordinates = result
+
+
+def densify_line_segment(
+    densify_config: DenseConfig,
+    coords: GeojsonCoordinates,
+) -> None:
+    linestring = cast(LineStringCoords, coords)
+    added_nodes = 0
+    stop = len(linestring) - 1
+    for i, _ in enumerate(linestring[:stop]):
+        added_nodes += _add_vertices_to_line_segment(
+            linestring, i + added_nodes, densify_config
+        )
+
+
+def check_density_geojson_object(
+    densify_config: DenseConfig, geojson_obj: GeojsonObject
+) -> CrsFeatureCollection:
+    validate_geom_type(geojson_obj, "density-check")
+    _check_density_geometry = partial(check_density_geometry, densify_config)
+    result: Nested[ReportLineString] | None = transform_geojson_geometries(
+        geojson_obj, _check_density_geometry
+    )
+    if result is None:
+        raise ValueError("_check_density_geometry returned None")
+
     flat_result: list[ReportLineString] = (
         list(  # filter out None values, these occur when point geometries are part of input
-            filter(lambda x: x is not None, flatten(result))
+            filter(lambda x: x is not None, _flatten(result))
         )
     )
-    report_fc = report_line_string_to_geojson(
-        flat_result, ":".join(dc.src_crs.to_authority())
+    report_fc = _report_line_string_to_geojson(
+        flat_result, ":".join(densify_config.src_crs.to_authority())
     )
     return report_fc
 
 
-def get_density_check_fun(
+def check_density_geometry(
     densify_config: DenseConfig,
-) -> Callable:
-    def density_check(
-        geometry: GeojsonGeomNoGeomCollection,
-    ) -> Nested[ReportLineString]:
-        return check_density_geometry_coordinates(geometry.coordinates, densify_config)
+    geometry: GeojsonGeomNoGeomCollection,
+) -> Nested[ReportLineString] | None:
+    _check_density_linestring = partial(check_density_linestring, densify_config)
+    return transform_linestrings_in_coordinates(
+        geometry.coordinates, _check_density_linestring
+    )
 
-    return density_check
+
+def check_density_linestring(
+    densify_config: DenseConfig,
+    linestring: LineStringCoords,
+) -> list[ReportLineString]:
+    result = []
+
+    for k in range(0, len(linestring) - 1):
+        a: Position = linestring[k]
+        b: Position = linestring[k + 1]
+
+        a_2d = cast(Position2D, a[0:2])
+        b_2d = cast(Position2D, b[0:2])
+
+        if densify_config.in_projection:
+            linesegment_dist = _cartesian_distance(a_2d, b_2d)
+        else:
+            if (
+                densify_config.src_crs.is_projected
+            ):  # only convert to basegeographic crs if src_proj is projected
+                transformer = densify_config.transformer
+                if transformer is None:
+                    raise GeodenseError(
+                        "transformer cannot be None when src_crs.is_projected=True"
+                    )
+                a_t = transformer.transform(*a_2d)
+                b_t = transformer.transform(*b_2d)
+            else:  # src_crs is geographic do not transform
+                a_t, b_t = (a_2d, b_2d)
+            g = densify_config.geod
+
+            _, _, geod_dist = g.inv(*a_t, *b_t, return_back_azimuth=True)
+            if math.isnan(geod_dist):
+                raise GeodenseError(
+                    f"unable to calculate geodesic distance, output calculation geodesic distance: {geod_dist}, expected: floating-point number"
+                )
+            linesegment_dist = geod_dist
+        if linesegment_dist > (densify_config.max_segment_length + 0.001):
+            result.append((linesegment_dist, (a, b)))
+    return result
 
 
 def _validate_dependent_file_args(
@@ -117,8 +190,8 @@ def check_density_file(  # noqa: PLR0913
     _validate_dependent_file_args(input_file_path, density_check_report_path, overwrite)
 
     with open(input_file_path) if input_file_path != "-" else sys.stdin as src:
-        geojson_obj = get_geojson_obj(src)
-        _geom_type_check(geojson_obj, "check-density")
+        geojson_obj = textio_to_geojson(src)
+        validate_geom_type(geojson_obj, "check-density")
         has_3d_coords: Has3D = _has_3d_coordinates(geojson_obj)
         geojson_src_crs = _get_crs_geojson(
             geojson_obj, input_file_path, src_crs, has_3d_coords
@@ -128,7 +201,7 @@ def check_density_file(  # noqa: PLR0913
             max_segment_length,
             in_projection=in_projection,
         )
-        report_fc = density_check_geojson_object(geojson_obj, config)
+        report_fc = check_density_geojson_object(config, geojson_obj)
 
     failed_segment_count = len(report_fc.features)
     check_status = failed_segment_count == 0
@@ -139,7 +212,7 @@ def check_density_file(  # noqa: PLR0913
     return (check_status, density_check_report_path, len(report_fc.features))
 
 
-def report_line_string_to_geojson(
+def _report_line_string_to_geojson(
     report: list[ReportLineString], src_crs_auth_code: str | None
 ) -> CrsFeatureCollection:
     features = [
@@ -186,7 +259,7 @@ def densify_file(  # noqa: PLR0913
     _validate_dependent_file_args(input_file_path, output_file_path, overwrite)
     src: TextIO
     with open(input_file_path) if input_file_path != "-" else sys.stdin as src:
-        geojson_obj = get_geojson_obj(src)
+        geojson_obj = textio_to_geojson(src)
         has_3d_coords: Has3D = _has_3d_coordinates(geojson_obj)
         geojson_src_crs = _get_crs_geojson(
             geojson_obj, input_file_path, src_crs, has_3d_coords
@@ -196,7 +269,7 @@ def densify_file(  # noqa: PLR0913
             max_segment_length,
             densify_in_projection,
         )
-        densify_geojson_object(geojson_obj, config)
+        densify_geojson_object(config, geojson_obj)
         if src_crs is not None and isinstance(geojson_obj, CrsFeatureCollection):
             geojson_obj.set_crs_auth_code(src_crs)
         with (
@@ -207,64 +280,131 @@ def densify_file(  # noqa: PLR0913
             out_f.write(geojson_obj_model.model_dump_json(indent=1, exclude_none=True))
 
 
-def apply_function_on_geojson_geometries(  # noqa: C901
-    body: (
+def transform_linestrings_in_coordinates(
+    coordinates: GeojsonCoordinates,
+    callback: Callable[[GeojsonCoordinates], T],
+) -> Nested | T | None:
+    # when point geometry return None, since we only want to operate on linestring-like coordinates sequences
+    if isinstance(coordinates, tuple):
+        return None
+    elif not _is_linestring_geom(coordinates):
+        _self = partial(transform_linestrings_in_coordinates, callback=callback)
+        return list(
+            map(
+                _self,
+                coordinates,
+            )
+        )
+    else:
+        return callback(coordinates)
+
+
+def traverse_linestrings_in_coordinates(
+    coordinates: GeojsonCoordinates,
+    callback: Callable[[GeojsonCoordinates], None],
+) -> GeojsonCoordinates:
+    """Differs from transform_linestrings_in_coordinates in that it does not transform the type of coordinates, so coordinates in > coordinates out. transform_linestrings_in_coordinates expects a callback that transforms the linestring coordinates to generic type  T."""
+    #  maybe do perform mutations on copy
+    if isinstance(coordinates, tuple):
+        return coordinates
+    elif not _is_linestring_geom(coordinates):
+        _self = partial(traverse_linestrings_in_coordinates, callback=callback)
+        list(
+            map(
+                _self,
+                coordinates,
+            )
+        )
+    else:
+        callback(coordinates)
+    return coordinates
+
+
+def traverse_geojson_geometries(
+    geojson: Feature | CrsFeatureCollection | Geometry,
+    geometry_callback: Callable[[Geometry], None] | None = None,
+    node_callback: Callable | None = None,
+) -> Feature | CrsFeatureCollection | Geometry:
+    _self: Callable[
+        [Feature | CrsFeatureCollection | Geometry],
+        Feature | CrsFeatureCollection | Geometry,
+    ] = partial(
+        traverse_geojson_geometries,
+        geometry_callback=geometry_callback,
+        node_callback=node_callback,
+    )
+
+    _geojson = geojson.model_copy(deep=True)
+
+    if isinstance(geojson, Feature):
+        feature = cast(Feature, geojson)
+        _feature = cast(Feature, _geojson)
+        geom = cast(GeojsonGeomNoGeomCollection, feature.geometry)
+        try:
+            _feature.geometry = _self(geom)
+        except InfValCoordinateError as _:
+            _feature.geometry = None
+
+    elif isinstance(geojson, CrsFeatureCollection):
+        _feature_collection: CrsFeatureCollection = cast(CrsFeatureCollection, _geojson)
+        _feature_collection.features = list(map(_self, _feature_collection.features))
+    elif isinstance(geojson, GeometryCollection):
+        _geometry_collection = cast(GeometryCollection, _geojson)
+        __self = cast(
+            Callable[
+                [Geometry],
+                Geometry,
+            ],
+            _self,
+        )  # cast to more specific type, to fix mypy error
+        _geometry_collection.geometries = list(
+            map(__self, _geometry_collection.geometries)
+        )
+    elif isinstance(
+        geojson,
+        Point | MultiPoint | LineString | MultiLineString | Polygon | MultiPolygon,
+    ):
+        if geometry_callback is not None:
+            _geom = cast(GeojsonGeomNoGeomCollection, _geojson)
+            geometry_callback(_geom)
+
+    if node_callback:
+        node_callback(_geojson)
+
+    return _geojson
+
+
+def transform_geojson_geometries(
+    geojson: (
         Feature
         | CrsFeatureCollection
         | GeojsonGeomNoGeomCollection
         | GeometryCollection
     ),
-    callback: Callable[[GeojsonGeomNoGeomCollection], Nested | None],
-) -> Nested:
-    result: Nested = []
+    geometry_callback: Callable[[GeojsonGeomNoGeomCollection], T],
+) -> Nested | T:
+    _self = partial(transform_geojson_geometries, geometry_callback=geometry_callback)
 
-    if isinstance(body, Feature):
-        feature = cast(Feature, body)
-        if isinstance(feature.geometry, GeometryCollection):
-            return apply_function_on_geojson_geometries(feature.geometry, callback)
+    if isinstance(geojson, Feature):
+        feature = cast(Feature, geojson)
         geom = cast(GeojsonGeomNoGeomCollection, feature.geometry)
-        return [callback(geom)]
+        return _self(geom)
+
+    elif isinstance(geojson, CrsFeatureCollection):
+        feature_collection: CrsFeatureCollection = cast(CrsFeatureCollection, geojson)
+        return list(map(_self, feature_collection.features))
+    elif isinstance(geojson, GeometryCollection):
+        geometry_collection = cast(GeometryCollection, geojson)
+        return list(map(_self, geometry_collection.geometries))
     elif isinstance(
-        body, Point | MultiPoint | LineString | MultiLineString | Polygon | MultiPolygon
+        geojson,
+        Point | MultiPoint | LineString | MultiLineString | Polygon | MultiPolygon,
     ):
-        geom = cast(GeojsonGeomNoGeomCollection, body)
-        return [callback(geom)]
-    elif isinstance(body, CrsFeatureCollection):
-        fc_body: CrsFeatureCollection = body
-        features: Iterable[Feature] = fc_body.features
-
-        for ft in features:
-            if ft.geometry is None:
-                raise GeodenseError(f"feature does not have a geometry, feature: {ft}")
-
-            result_list = list(result)
-            if isinstance(ft.geometry, GeometryCollection):
-                ft_result: Nested = apply_function_on_geojson_geometries(
-                    ft.geometry, callback
-                )
-                result_list.append(ft_result)
-            else:
-                result_list.append(callback(ft.geometry))
-            result = result_list
-        return result
-    elif isinstance(body, GeometryCollection):
-        gc = cast(GeometryCollection, body)
-        geometries: list[Geometry] = gc.geometries
-
-        for g in geometries:
-            if isinstance(g, GeometryCollection):
-                raise GeodenseError("nested GeometryCollections are not supported")
-            g_no_gc = cast(
-                GeojsonGeomNoGeomCollection, g
-            )  # geojson prohibits nested geometrycollections - maybe throw exception if this occurs
-            result_list = list(result)
-            result_list.append(callback(g_no_gc))
-            result = result_list
-        return result
-    return result
+        geom = cast(GeojsonGeomNoGeomCollection, geojson)
+        return geometry_callback(geom)
 
 
-def _interpolate_geodesic(
+def interpolate_geodesic(
     a: Position, b: Position, densify_config: DenseConfig
 ) -> LineStringCoords:
     """geodesic interpolate intermediate points between points a and b, with segment_length < max_segment_length. Only returns intermediate points."""
@@ -272,8 +412,8 @@ def _interpolate_geodesic(
     three_dimensional_points = (
         len(a) == THREE_DIMENSIONAL and len(b) == THREE_DIMENSIONAL
     )
-    a_2d: tuple[float, float] = tuple(a[:2])  # type: ignore
-    b_2d: tuple[float, float] = tuple(b[:2])  # type: ignore
+    a_2d = Position2D(longitude=a.longitude, latitude=a.latitude)
+    b_2d = Position2D(longitude=b.longitude, latitude=b.latitude)
 
     transformer = densify_config.transformer
 
@@ -315,20 +455,21 @@ def _interpolate_geodesic(
             return_back_azimuth=True,
         )
 
-        def optional_back_transform(lon: float, lat: float) -> tuple[Any, Any]:
+        def optional_back_transform(lon: float, lat: float) -> Position2D:
             """technically should be named optional_back_convert, since crs->base crs is (mostly) a conversion and not a transformation"""
             if densify_config.src_crs.is_projected:
                 if densify_config.back_transformer is None:
                     raise GeodenseError(
                         "back_transformer cannot be None when src_crs.is_projected=True"
                     )
-                return densify_config.back_transformer.transform(lon, lat)
-            return (lon, lat)
+                _result = densify_config.back_transformer.transform(lon, lat)
+                return Position2D(longitude=_result[0], latitude=_result[1])
+            return Position2D(longitude=lon, latitude=lat)
 
         if three_dimensional_points:
             # interpolate height for three_dimensional_points
-            a_3d: tuple[float, float, float] = cast(tuple[float, float, float], a)
-            b_3d: tuple[float, float, float] = cast(tuple[float, float, float], b)
+            a_3d = cast(Position3D, a)
+            b_3d = cast(Position3D, b)
             height_a = a_3d[2:][0]
             height_b = b_3d[2:][0]
             delta_height_b_a = height_b - height_a
@@ -336,14 +477,12 @@ def _interpolate_geodesic(
                 new_max_segment_length / geod_dist
             )
             return [
-                tuple(  # type: ignore
-                    (
-                        *optional_back_transform(lon, lat),
-                        round(
-                            (height_a + ((i + 1) * delta_height_per_point)),
-                            DEFAULT_PRECISION_METERS,
-                        ),
-                    )
+                Position3D(
+                    *optional_back_transform(lon, lat),
+                    altitude=round(
+                        (height_a + ((i + 1) * delta_height_per_point)),
+                        DEFAULT_PRECISION_METERS,
+                    ),
                 )
                 for i, (lon, lat) in enumerate(zip(r.lons, r.lats, strict=True))
             ]
@@ -354,29 +493,26 @@ def _interpolate_geodesic(
             ]
 
 
-def _get_cartesian_distance(a: Position, b: Position) -> float:
+def _cartesian_distance(a: Position, b: Position) -> float:
     return math.sqrt((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2)  # pythagoras
 
 
-def _interpolate_src_proj(
+def interpolate_src_proj(
     a: Position, b: Position, densify_config: DenseConfig
 ) -> LineStringCoords:
     """Interpolate intermediate points between points a and b, with segment_length < max_segment_length. Only returns intermediate points."""
 
-    three_dimensional_points = (
-        len(a) == THREE_DIMENSIONAL and len(b) == THREE_DIMENSIONAL
-    )
-    if (
-        not three_dimensional_points
-    ):  # if not both three dimensional points, ensure both points are two dimensional
-        a = a[:2]
-        b = b[:2]
+    all_three_dimensional = len(a) == THREE_DIMENSIONAL and len(b) == THREE_DIMENSIONAL
+    # when mixed 2D/3D reduce to 2D, shapely cannot do interpolation on points with mixed dimensionality
+    if not all_three_dimensional:
+        a = Position2D(longitude=a.longitude, latitude=a.latitude)
+        b = Position2D(longitude=b.longitude, latitude=b.latitude)
 
-    dist = _get_cartesian_distance(a, b)
+    dist = _cartesian_distance(a, b)
     if dist <= densify_config.max_segment_length:
         return []
     else:
-        new_points: list[tuple[float, float] | tuple[float, float, float]] = []
+        new_points: list[Position] = []
 
         (
             nr_points,
@@ -389,14 +525,20 @@ def _interpolate_src_proj(
             p_point: ShpPoint = ShpLineString([a, b]).interpolate(
                 new_max_segment_length * (i + 1)
             )
-            p = tuple(p_point.coords[0])
-            new_points.append(p)  # type: ignore
+            p_2d = Position2D(
+                longitude=p_point.coords[0][0], latitude=p_point.coords[0][1]
+            )
+            if len(p_point.coords[0]) == THREE_DIMENSIONAL:
+                p: Position = Position3D(*p_2d, altitude=p_point.coords[0][2])
+            else:
+                p = p_2d
+            new_points.append(p)
         return [
             *new_points,
         ]
 
 
-def get_geojson_obj(src: TextIO) -> GeojsonObject:
+def textio_to_geojson(src: TextIO) -> GeojsonObject:
     src_json = json.loads(src.read())
     type_map = {
         "Feature": Feature,
@@ -417,28 +559,6 @@ def get_geojson_obj(src: TextIO) -> GeojsonObject:
         raise GeodenseError(message) from e
     geojson_obj: GeojsonObject = constructor(**src_json)
     return geojson_obj
-
-
-def check_density_geometry_coordinates(
-    geometry_coordinates: GeojsonCoordinates,
-    densify_config: DenseConfig,
-    # indices: list[int] | None = None,
-) -> Nested[ReportLineString]:
-    # if indices is None:
-    #     indices = []
-
-    if isinstance(geometry_coordinates, tuple):
-        return [None]
-
-    if _is_linestring_geom(geometry_coordinates):
-        linestring_coords = cast(LineStringCoords, geometry_coordinates)
-        linestring_report = _check_density_linestring(linestring_coords, densify_config)
-        return linestring_report
-    else:
-        return [
-            check_density_geometry_coordinates(e, densify_config)
-            for i, e in enumerate(geometry_coordinates)
-        ]
 
 
 class Has3D(Enum):
@@ -491,55 +611,19 @@ def _get_crs_geojson(
     return result_crs
 
 
-def flatten(container: Nested) -> Iterable:
-    for i in container:
-        if isinstance(i, Sequence) and not isinstance(i, tuple):
-            yield from flatten(i)
+def _flatten(container: Nested) -> Iterable:
+    if isinstance(container, tuple | str):
+        raise ValueError("var container should not be of type tuple or str")
+
+    for item in container:
+        if (
+            isinstance(item, Sequence)
+            and not isinstance(item, tuple)
+            and not isinstance(item, str)
+        ):
+            yield from _flatten(item)
         else:
-            yield i
-
-
-def _check_density_linestring(
-    linestring: LineStringCoords,
-    densify_config: DenseConfig,
-    # indices: list[int],
-) -> list[ReportLineString]:
-    result = []
-
-    for k in range(0, len(linestring) - 1):
-        a: Position = linestring[k]
-        b: Position = linestring[k + 1]
-
-        a_2d: tuple[float, float] = tuple(a[0:2])  # type: ignore
-        b_2d: tuple[float, float] = tuple(b[0:2])  # type: ignore
-
-        if densify_config.in_projection:
-            linesegment_dist = _get_cartesian_distance(a_2d, b_2d)
-        else:
-            if (
-                densify_config.src_crs.is_projected
-            ):  # only convert to basegeographic crs if src_proj is projected
-                transformer = densify_config.transformer
-                if transformer is None:
-                    raise GeodenseError(
-                        "transformer cannot be None when src_crs.is_projected=True"
-                    )
-                a_t = transformer.transform(*a_2d)
-                b_t = transformer.transform(*b_2d)
-            else:  # src_crs is geographic do not transform
-                a_t, b_t = (a_2d, b_2d)
-            g = densify_config.geod
-
-            # see https://github.com/python/mypy/issues/6799
-            _, _, geod_dist = g.inv(*a_t, *b_t, return_back_azimuth=True)  # type: ignore
-            if math.isnan(geod_dist):
-                raise GeodenseError(
-                    f"unable to calculate geodesic distance, output calculation geodesic distance: {geod_dist}, expected: floating-point number"
-                )
-            linesegment_dist = geod_dist
-        if linesegment_dist > (densify_config.max_segment_length + 0.001):
-            result.append((linesegment_dist, (a, b)))
-    return result
+            yield item
 
 
 def _is_linestring_geom(geometry_coordinates: GeojsonCoordinates) -> bool:
@@ -565,33 +649,15 @@ def _is_linestring_geom(geometry_coordinates: GeojsonCoordinates) -> bool:
     return False
 
 
-def _raise_e_if_point_geom(geometry_coordinates: GeojsonCoordinates) -> None:
-    if isinstance(geometry_coordinates, tuple):  # assume is point when tuple
-        raise GeodenseError(
-            "received point geometry coordinates, instead of (multi)linestring"
+def _transform_positions_in_coordinates(
+    coordinates: GeojsonCoordinates,
+    callback: Callable[[GeojsonCoordinates], T],
+) -> Nested | T:
+    if not isinstance(coordinates, tuple):
+        return list(
+            map(lambda x: _transform_positions_in_coordinates(x, callback), coordinates)
         )
-
-
-def _transform_linestrings_in_geometry_coordinates(
-    geometry_coordinates: GeojsonCoordinates,
-    transform_fun: Callable[[LineStringCoords], Nested],
-    retain_point_geoms: bool = False,
-) -> Nested | None | T:
-    if isinstance(geometry_coordinates, tuple):
-        if retain_point_geoms:
-            return geometry_coordinates
-        else:
-            return None
-    if _is_linestring_geom(geometry_coordinates):
-        linestring_coords = cast(LineStringCoords, geometry_coordinates)
-        return transform_fun(linestring_coords)
-    else:
-        return [
-            _transform_linestrings_in_geometry_coordinates(
-                e, transform_fun, retain_point_geoms=retain_point_geoms
-            )
-            for e in geometry_coordinates
-        ]
+    return callback(coordinates)
 
 
 def _get_intermediate_nr_points_and_segment_length(
@@ -634,93 +700,63 @@ def _add_vertices_to_line_segment(
     prec = densify_config.get_coord_precision()
 
     if not densify_config.in_projection:
-        p = list(
-            [
-                _round_coordinates(x, prec)
-                for x in _interpolate_geodesic(a, b, densify_config)
-            ]
-        )
+        linestring_coords = interpolate_geodesic(a, b, densify_config)
     else:
-        p = list(
-            [
-                _round_coordinates(x, prec)
-                for x in _interpolate_src_proj(a, b, densify_config)
-            ]
-        )
+        linestring_coords = interpolate_src_proj(a, b, densify_config)
 
-    linestring[coord_index] = _round_coordinates(linestring[coord_index], prec)  # type: ignore
-    linestring[coord_index + 1] = _round_coordinates(linestring[coord_index + 1], prec)  # type: ignore
-    linestring[coord_index + 1 : coord_index + 1] = p  # type: ignore
+    p = list(map(lambda x: _round_coordinates(x, prec), linestring_coords))
+
+    linestring[coord_index] = _round_coordinates(linestring[coord_index], prec)
+    linestring[coord_index + 1] = _round_coordinates(linestring[coord_index + 1], prec)
+    linestring[coord_index + 1 : coord_index + 1] = p
     return len(p)
 
 
-def _round_coordinates(coordinates: tuple, position_precision: int) -> tuple:
-    result = tuple([round(x, position_precision) for x in coordinates[:2]])
-    if len(coordinates) == THREE_DIMENSIONAL:
-        result = (*result, round(coordinates[2], DEFAULT_PRECISION_METERS))
+def _round_coordinates(position: Position, precision: int) -> Position:
+    result: Position = Position2D(
+        longitude=round(position.longitude, precision),
+        latitude=round(position.latitude, precision),
+    )
+
+    if len(position) == THREE_DIMENSIONAL:
+        position_3d = cast(Position3D, position)
+        result = Position3D(
+            longitude=result.longitude,
+            latitude=result.latitude,
+            altitude=round(position_3d.altitude, DEFAULT_PRECISION_METERS),
+        )
     return result
 
 
 def _get_geometry_type(
     geometry: GeojsonGeomNoGeomCollection,
-    _indices: list[int] | None = None,
 ) -> str:
     return cast(str, geometry.type)
 
 
 def _geom_has_3d_coords(
     geometry: GeojsonGeomNoGeomCollection,
-) -> Nested[bool] | None:
-    def _linestring_has_3d_coords(linestring_coords: LineStringCoords) -> Nested[bool]:
-        return [len(x) == THREE_DIMENSIONAL for x in linestring_coords]
+) -> Nested[bool] | bool:
 
-    return _transform_linestrings_in_geometry_coordinates(
-        geometry.coordinates, _linestring_has_3d_coords
-    )
+    def _position_is_3d(position: GeojsonCoordinates) -> bool:
+        return len(position) == THREE_DIMENSIONAL
 
-
-def _get_line_segment_densify_fun(
-    densify_config: DenseConfig,
-) -> Callable[[LineStringCoords], LineStringCoords]:
-    def line_segment_densify(
-        linestring: LineStringCoords,
-    ) -> LineStringCoords:
-        added_nodes = 0
-        stop = len(linestring) - 1
-        for i, _ in enumerate(linestring[:stop]):
-            added_nodes += _add_vertices_to_line_segment(
-                linestring, i + added_nodes, densify_config
-            )
-        return linestring
-
-    return line_segment_densify
-
-
-def _get_geom_densify_fun(
-    densify_config: DenseConfig,
-) -> Callable[[GeojsonGeomNoGeomCollection], GeojsonCoordinates]:
-    def _geom_densify(geometry: GeojsonGeomNoGeomCollection) -> GeojsonCoordinates:
-        _add_vertices_exceeding_max_segment_length = _get_line_segment_densify_fun(
-            densify_config
-        )
-        result: GeojsonCoordinates = _transform_linestrings_in_geometry_coordinates(  # type: ignore
-            geometry.coordinates,
-            _add_vertices_exceeding_max_segment_length,
-            retain_point_geoms=True,
-        )
-        geometry.coordinates = result
-        return result
-
-    return _geom_densify
+    return _transform_positions_in_coordinates(geometry.coordinates, _position_is_3d)
 
 
 def _has_3d_coordinates(
     geojson_obj: GeojsonObject, silent: bool | None = False
 ) -> Has3D:
-    has_3d_coords: Nested[bool] = apply_function_on_geojson_geometries(
+    has_3d_coords: Nested[bool] | bool = transform_geojson_geometries(
         geojson_obj, _geom_has_3d_coords
     )
-    has_3d_coords_flat = list(flatten(has_3d_coords))
+
+    # in case only value returned from transform_geojson_geometries
+    if isinstance(has_3d_coords, bool):  # noqa: SIM108
+        has_3d_coords_flat = [has_3d_coords]
+    else:
+        has_3d_coords_flat = list(_flatten(has_3d_coords))
+
     if not all(has_3d_coords_flat) and any(has_3d_coords_flat):  # some 3d
         if not silent:
             warning_message = "geometries with mixed 2D and 3D vertices found"
@@ -731,19 +767,20 @@ def _has_3d_coordinates(
     return Has3D.all
 
 
-def _geom_type_check(geojson_obj: GeojsonObject, command: str = "") -> None:
-    geom_types: Nested[str] = apply_function_on_geojson_geometries(
+def validate_geom_type(geojson_obj: GeojsonObject, command: str = "") -> None:
+    geom_types: Nested[str] | str = transform_geojson_geometries(
         geojson_obj, _get_geometry_type
     )
-
-    if all(g_t in ("Point", "MultiPoint") for g_t in geom_types):
+    geom_types = [geom_types] if isinstance(geom_types, str) else geom_types
+    geom_types_flat = list(_flatten(geom_types))
+    if all(g_t in ("Point", "MultiPoint") for g_t in geom_types_flat):
         # situation: all geoms point -> error
         if command:
             error_message = f"cannot run {command} on GeoJSON that only contains (Multi)Point geometries"
         else:
             error_message = "GeoJSON contains only (Multi)Point geometries"
         raise GeodenseError(error_message)
-    elif any(gt in ["Point", "MultiPoint"] for gt in geom_types):
+    elif any(gt in ["Point", "MultiPoint"] for gt in geom_types_flat):
         # sitation: some geoms point -> warning
         warning_message = "GeoJSON contains (Multi)Point geometries"
         if command:
