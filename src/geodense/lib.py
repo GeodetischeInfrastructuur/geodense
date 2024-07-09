@@ -685,9 +685,6 @@ def _get_intermediate_nr_points_and_segment_length(
     return nr_points, new_max_segment_length
 
 
-# def tuple_to_position(tuple_post: tuple[float|int],)
-
-
 def _add_vertices_to_line_segment(
     linestring: LineStringCoords, coord_index: int, densify_config: DenseConfig
 ) -> int:
