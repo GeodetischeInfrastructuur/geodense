@@ -96,10 +96,10 @@ def check_density_geojson_object(
 
     flat_result: list[ReportLineString] = (
         list(  # filter out None values, these occur when point geometries are part of input
-            filter(lambda x: x is not None, flatten(result))
+            filter(lambda x: x is not None, _flatten(result))
         )
     )
-    report_fc = report_line_string_to_geojson(
+    report_fc = _report_line_string_to_geojson(
         flat_result, ":".join(densify_config.src_crs.to_authority())
     )
     return report_fc
@@ -212,7 +212,7 @@ def check_density_file(  # noqa: PLR0913
     return (check_status, density_check_report_path, len(report_fc.features))
 
 
-def report_line_string_to_geojson(
+def _report_line_string_to_geojson(
     report: list[ReportLineString], src_crs_auth_code: str | None
 ) -> CrsFeatureCollection:
     features = [
@@ -611,7 +611,7 @@ def _get_crs_geojson(
     return result_crs
 
 
-def flatten(container: Nested) -> Iterable:
+def _flatten(container: Nested) -> Iterable:
     if isinstance(container, tuple | str):
         raise ValueError("var container should not be of type tuple or str")
 
@@ -621,7 +621,7 @@ def flatten(container: Nested) -> Iterable:
             and not isinstance(item, tuple)
             and not isinstance(item, str)
         ):
-            yield from flatten(item)
+            yield from _flatten(item)
         else:
             yield item
 
@@ -649,20 +649,13 @@ def _is_linestring_geom(geometry_coordinates: GeojsonCoordinates) -> bool:
     return False
 
 
-def _raise_e_if_point_geom(geometry_coordinates: GeojsonCoordinates) -> None:
-    if isinstance(geometry_coordinates, tuple):  # assume is point when tuple
-        raise GeodenseError(
-            "received point geometry coordinates, instead of (multi)linestring"
-        )
-
-
-def transform_positions_in_coordinates(
+def _transform_positions_in_coordinates(
     coordinates: GeojsonCoordinates,
     callback: Callable[[GeojsonCoordinates], T],
 ) -> Nested | T:
     if not isinstance(coordinates, tuple):
         return list(
-            map(lambda x: transform_positions_in_coordinates(x, callback), coordinates)
+            map(lambda x: _transform_positions_in_coordinates(x, callback), coordinates)
         )
     return callback(coordinates)
 
@@ -748,7 +741,7 @@ def _geom_has_3d_coords(
     def _position_is_3d(position: GeojsonCoordinates) -> bool:
         return len(position) == THREE_DIMENSIONAL
 
-    return transform_positions_in_coordinates(geometry.coordinates, _position_is_3d)
+    return _transform_positions_in_coordinates(geometry.coordinates, _position_is_3d)
 
 
 def _has_3d_coordinates(
@@ -762,7 +755,7 @@ def _has_3d_coordinates(
     if isinstance(has_3d_coords, bool):  # noqa: SIM108
         has_3d_coords_flat = [has_3d_coords]
     else:
-        has_3d_coords_flat = list(flatten(has_3d_coords))
+        has_3d_coords_flat = list(_flatten(has_3d_coords))
 
     if not all(has_3d_coords_flat) and any(has_3d_coords_flat):  # some 3d
         if not silent:
@@ -779,7 +772,7 @@ def validate_geom_type(geojson_obj: GeojsonObject, command: str = "") -> None:
         geojson_obj, _get_geometry_type
     )
     geom_types = [geom_types] if isinstance(geom_types, str) else geom_types
-    geom_types_flat = list(flatten(geom_types))
+    geom_types_flat = list(_flatten(geom_types))
     if all(g_t in ("Point", "MultiPoint") for g_t in geom_types_flat):
         # situation: all geoms point -> error
         if command:

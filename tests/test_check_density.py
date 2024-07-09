@@ -6,7 +6,7 @@ import pytest
 from geodense.lib import (
     check_density_file,
     check_density_geometry,
-    flatten,
+    _flatten,
     transform_geojson_geometries,
 )
 from geodense.models import DenseConfig, GeodenseError
@@ -41,7 +41,7 @@ def test_check_density_not_pass(linestring_feature_gj):
         feature, _check_density_geometry
     )
 
-    flat_result: list[ReportLineString] = list(flatten(result))
+    flat_result: list[ReportLineString] = list(_flatten(result))
     assert len(flat_result) > 0
 
 
@@ -68,7 +68,7 @@ def test_check_density_polygon_with_hole_not_pass(polygon_feature_with_holes_gj)
         feature, _check_density_geometry
     )
 
-    flat_result: list[ReportLineString] = list(flatten(result))
+    flat_result: list[ReportLineString] = list(_flatten(result))
     assert len(flat_result) > 0
 
 
@@ -81,7 +81,7 @@ def test_check_density_3d(linestring_3d_feature_gj):
         feature, _check_density_geometry
     )
 
-    flat_result: list[ReportLineString] = list(flatten(result))
+    flat_result: list[ReportLineString] = list(_flatten(result))
     assert len(flat_result) > 0
 
 

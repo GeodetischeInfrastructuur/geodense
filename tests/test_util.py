@@ -4,7 +4,7 @@ from typing import Any
 
 import pytest
 from _pytest.python_api import RaisesContext
-from geodense.lib import _raise_e_if_point_geom, validate_geom_type
+from geodense.lib import validate_geom_type
 from geodense.models import GeodenseError
 from geojson_pydantic import Feature
 
@@ -36,23 +36,3 @@ def test_mixed_geom_outputs_warning(geometry_collection_feature_gj, caplog):
     validate_geom_type(geojson_obj)
     my_regex = re.compile(r"WARNING .* GeoJSON contains \(Multi\)Point geometries\n")
     assert my_regex.match(caplog.text) is not None
-
-
-@pytest.mark.parametrize(
-    ("feature_fixture", "expected"),
-    [
-        (
-            "point_feature_gj",
-            pytest.raises(
-                GeodenseError,
-                match=r"received point geometry coordinates, instead of \(multi\)linestring",
-            ),
-        ),
-        ("polygon_feature_with_holes_gj", does_not_raise()),
-    ],
-)
-def test_raise_if_point(feature_fixture, expected, request):
-    feature: Feature = request.getfixturevalue(feature_fixture)
-
-    with expected:
-        _raise_e_if_point_geom(feature.geometry.coordinates)
