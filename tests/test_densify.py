@@ -11,7 +11,7 @@ from geodense.lib import (
     _get_intermediate_nr_points_and_segment_length,
     densify_file,
     densify_geojson_object,
-    get_geojson_obj,
+    textio_to_geojson,
 )
 from geodense.models import DenseConfig, GeodenseError
 
@@ -328,8 +328,8 @@ def test_point_raises_warning_and_noop(test_dir, tmpdir, caplog):
     ), f"stderr expected message is: '{expected_warning}', actual message was: '{output}'"
 
     with open(input_file) as in_f, open(output_file) as out_f:
-        feature_gc = get_geojson_obj(in_f)
-        feature_gc_t = get_geojson_obj(out_f)
+        feature_gc = textio_to_geojson(in_f)
+        feature_gc_t = textio_to_geojson(out_f)
         assert (
             feature_gc.geometry.geometries[0].coordinates
             == feature_gc_t.geometry.geometries[0].coordinates
