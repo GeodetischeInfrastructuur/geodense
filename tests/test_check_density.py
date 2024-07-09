@@ -4,9 +4,9 @@ from unittest import mock
 
 import pytest
 from geodense.lib import (
+    _flatten,
     check_density_file,
     check_density_geometry,
-    _flatten,
     transform_geojson_geometries,
 )
 from geodense.models import DenseConfig, GeodenseError
