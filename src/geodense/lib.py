@@ -638,15 +638,12 @@ def _is_linestring_geom(geometry_coordinates: GeojsonCoordinates) -> bool:
     Returns:
         bool: if geometry_coordinates is linestring return True else False
     """
-    if (
+
+    return (
         len(geometry_coordinates) > 0
         and isinstance(geometry_coordinates[0], Sequence)
-        and all(
-            isinstance(x, float | int) for x in geometry_coordinates[0]
-        )  # also test for int just in case...
-    ):
-        return True
-    return False
+        and all(isinstance(x, float | int) for x in geometry_coordinates[0])
+    )  # also test for int just in case...
 
 
 def _transform_positions_in_coordinates(
