@@ -69,9 +69,9 @@ def test_interpolate_round_projected():
             for p in points_proj
             for x in p
         ]
-    )  # https://stackoverflow.com/a/26231848/1763690 
-       # Quick way to check the precision of the output values.
-       # Do note that the slice will reverse the string [::-1]
+    )  # https://stackoverflow.com/a/26231848/1763690
+    # Quick way to check the precision of the output values.
+    # Do note that the slice will reverse the string [::-1]
 
 
 def test_interpolate_round_geographic():
