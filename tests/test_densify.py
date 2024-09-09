@@ -7,6 +7,7 @@ from contextlib import suppress
 
 import pyproj
 import pytest
+
 from geodense.lib import (
     _get_intermediate_nr_points_and_segment_length,
     densify_file,

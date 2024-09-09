@@ -3,6 +3,9 @@ from functools import partial
 from unittest import mock
 
 import pytest
+from geojson_pydantic import Feature
+from pyproj import CRS
+
 from geodense.lib import (
     _flatten,
     check_density_file,
@@ -11,8 +14,6 @@ from geodense.lib import (
 )
 from geodense.models import DenseConfig, GeodenseError
 from geodense.types import Nested, ReportLineString
-from geojson_pydantic import Feature
-from pyproj import CRS
 
 
 def test_check_density(test_dir):

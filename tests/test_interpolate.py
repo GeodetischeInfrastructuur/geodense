@@ -1,6 +1,9 @@
 from copy import deepcopy
 
 import pytest
+from geojson_pydantic.types import Position2D, Position3D
+from pyproj import CRS
+
 from geodense.lib import (
     THREE_DIMENSIONAL,
     _add_vertices_to_line_segment,
@@ -12,8 +15,6 @@ from geodense.models import (
     DEFAULT_PRECISION_METERS,
     DenseConfig,
 )
-from geojson_pydantic.types import Position2D, Position3D
-from pyproj import CRS
 
 
 def tuple_2_pos(tup):
