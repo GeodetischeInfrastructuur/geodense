@@ -4,6 +4,7 @@ from typing import Any
 
 import pytest
 from _pytest.python_api import RaisesContext
+
 from geodense.lib import validate_geom_type
 from geodense.models import GeodenseError
 

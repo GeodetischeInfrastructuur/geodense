@@ -5,9 +5,10 @@ from contextlib import nullcontext as does_not_raise
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
-import geodense
 import pytest
 from cli_test_helpers import ArgvContext
+
+import geodense
 from geodense.main import check_density_cmd, main
 from geodense.models import DEFAULT_MAX_SEGMENT_LENGTH, GeodenseError
 
