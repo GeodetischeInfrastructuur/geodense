@@ -26,5 +26,5 @@ jobs:
         run: |
           mypy src/
       - name: Test with pytest and generate coverage report
-        run: |
+        run: |-
           coverage run --source=src/geodense -m pytest -v tests
