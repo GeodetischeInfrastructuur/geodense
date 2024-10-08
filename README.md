@@ -3,7 +3,7 @@
 [![Code
 Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fgeodetischeinfrastructuur.github.io%2Fgeodense%2Fbadge.json&style=flat-square&logo=pytest&logoColor=white)](https://geodetischeinfrastructuur.github.io/geodense/)
 [![Python
-3.11+](https://img.shields.io/badge/python-3.11+-teal.svg?style=flat-square)](https://www.python.org/downloads/release/python-3116/)
+3.12+](https://img.shields.io/badge/python-3.12+-teal.svg?style=flat-square)](https://www.python.org/downloads/release/python-3116/)
 ![License:
 MIT](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)
 [![PyPI
