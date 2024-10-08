@@ -14,21 +14,28 @@ permissions:
   contents: read
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v3
+      - uses: actions/checkout@v4
         with:
-          python-version: '3.11'
+          fetch-depth: 0 # to fetch all history for all branches and tags; required because we derive app version from latest tag
+          fetch-tags: true
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          # Install a specific version of uv.
+          version: "0.4.19"
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install build
+          uv sync
+      - name: Set env PATH
+        run: echo "PATH="$(pwd)/.venv/bin:$PATH"" >> $GITHUB_ENV
+      - name: Set env PROJ_DIR
+        run: echo "PROJ_DIR="$(pwd)/.venv/lib/python${PYTHON_VERSION}/site-packages/pyproj/proj_dir/share/proj"" >> $GITHUB_ENV
       - name: Build package
-        run: python -m build
+        run: uv build --wheel
       - name: Publish package
-        uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
+        uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
