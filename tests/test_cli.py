@@ -55,9 +55,7 @@ def test_check_density_cmd_exit_0(test_dir):
     ), f"expected check_density_cmd call to exit with exit code {expected_exit_code} was {cm.value.code}"
 
 
-@patch(
-    "geodense.main.check_density_file", MagicMock(return_value=[([0, 1], 100.1239123)])
-)
+@patch("geodense.main.check_density_file", MagicMock(return_value=[([0, 1], 100.1239123)]))
 def test_check_density_cmd_exit_1_when_result_not_ok(test_dir):
     input_file = os.path.join(test_dir, "data", "polygons.json")
     with pytest.raises(SystemExit) as cm:
@@ -84,9 +82,7 @@ def test_check_density_cmd_exit_1_when_result_not_ok(test_dir):
         ("linestrings.json", "linestrings.geojson", (does_not_raise(), 0, None)),
     ],
 )
-def test_densify_file_unsupported_file_format(
-    test_dir, input_file, output_file, expectation, capsys
-):
+def test_densify_file_unsupported_file_format(test_dir, input_file, output_file, expectation, capsys):
     input_file = os.path.join(test_dir, "data", input_file)
     output_file = os.path.join(tempfile.mkdtemp(), output_file)
 

@@ -26,10 +26,7 @@ def test_3d_coords_2d_crs_raises_warning(test_dir, capsys):
     ):
         main()
     _, err = capsys.readouterr()
-    assert (
-        err
-        == "[WARNING] src_crs is 2D while input data contains geometries with 3D coordinates\n"
-    )
+    assert err == "[WARNING] src_crs is 2D while input data contains geometries with 3D coordinates\n"
 
 
 @pytest.mark.parametrize(
@@ -43,9 +40,7 @@ def test_3d_coords_2d_crs_raises_warning(test_dir, capsys):
         ("linestring_feature.json", "EPSG:7415", r""),
     ],
 )
-def test_2d_coords_3d_crs_raises_no_warning(
-    test_dir, capsys, input_file, src_crs, expected
-):
+def test_2d_coords_3d_crs_raises_no_warning(test_dir, capsys, input_file, src_crs, expected):
     in_filepath = f"{test_dir}/data/{input_file}"
     max_segment_length = "10000"
     args = [
@@ -74,9 +69,7 @@ def test_2d_coords_3d_crs_raises_no_warning(
         ("linestring_feature.json", "EPSG:7415", r""),
     ],
 )
-def test_2d_coords_3d_crs_raises_no_warning_densify(
-    test_dir, capsys, input_file, src_crs, expected
-):
+def test_2d_coords_3d_crs_raises_no_warning_densify(test_dir, capsys, input_file, src_crs, expected):
     in_filepath = f"{test_dir}/data/{input_file}"
     max_segment_length = "5000"
     out_dir = tempfile.mkdtemp()

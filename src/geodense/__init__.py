@@ -19,7 +19,9 @@ def get_log_handler(verbose: bool) -> logging.StreamHandler:
 
 def get_formatter(verbose: bool) -> Formatter:
     format_string_default = "[%(levelname)s] %(message)s"
-    format_string_verbose = f"[%(levelname)s] [%(filename)s:%(lineno)d] [{__name__}.%(module)s.%(funcName)s] %(message)s"
+    format_string_verbose = (
+        f"[%(levelname)s] [%(filename)s:%(lineno)d] [{__name__}.%(module)s.%(funcName)s] %(message)s"
+    )
     format_string = format_string_verbose if verbose else format_string_default
     formatter = logging.Formatter(format_string)
     return formatter

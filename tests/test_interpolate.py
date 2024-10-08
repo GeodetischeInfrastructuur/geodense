@@ -57,19 +57,13 @@ def test_add_vertices_exceeding_max_segment_length():
 
 def test_interpolate_round_projected():
     """Note precision is only reduced by round()"""
-    points_proj = [
-        tuple_2_pos(x) for x in [(0.12345678, 0.12345678), (10.12345678, 10.12345678)]
-    ]
+    points_proj = [tuple_2_pos(x) for x in [(0.12345678, 0.12345678), (10.12345678, 10.12345678)]]
 
     c = DenseConfig(CRS.from_epsg(28992), 10, True)
     _add_vertices_to_line_segment(points_proj, 0, c)
 
     assert all(
-        [
-            str(x)[::-1].find(".") == DEFAULT_PRECISION_METERS
-            for p in points_proj
-            for x in p
-        ]
+        [str(x)[::-1].find(".") == DEFAULT_PRECISION_METERS for p in points_proj for x in p]
     )  # https://stackoverflow.com/a/26231848/1763690
     # Quick way to check the precision of the output values.
     # Do note that the slice will reverse the string [::-1]

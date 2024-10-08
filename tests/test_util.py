@@ -23,9 +23,7 @@ from geodense.models import GeodenseError
         ("geometry_collection_gj", does_not_raise()),
     ],
 )
-def test_validate_geom_type(
-    geojson, expectation: Any | RaisesContext[GeodenseError], request
-):
+def test_validate_geom_type(geojson, expectation: Any | RaisesContext[GeodenseError], request):
     with expectation:
         gj_obj = request.getfixturevalue(geojson)
         validate_geom_type(gj_obj)

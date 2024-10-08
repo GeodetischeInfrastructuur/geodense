@@ -28,9 +28,7 @@ def cli_exception_handler(f: Callable) -> Callable:
         except GeodenseError as e:
             logger.error(e)
             sys.exit(1)
-        except (
-            Exception
-        ) as e:  # unexpected exception, show stacktrace by calling logger.exception
+        except Exception as e:  # unexpected exception, show stacktrace by calling logger.exception
             logger.exception(e)
             sys.exit(1)
 
@@ -91,12 +89,12 @@ def check_density_cmd(  # noqa: PLR0913
 
 
 def main() -> None:
-    input_file_help = "any valid GeoJSON file, accepted GeoJSON objects: FeatureCollection, Feature, Geometry and GeometryCollection "
+    input_file_help = (
+        "any valid GeoJSON file, accepted GeoJSON objects: FeatureCollection, Feature, Geometry and GeometryCollection "
+    )
     source_crs_help = "override source CRS, if not specified then the CRS found in the GeoJSON input file will be used; format: $AUTH:$CODE; for example: EPSG:4326"
     verbose_help = "verbose output"
-    max_segment_length_help = (
-        f"max allowed segment length in meters; default: {DEFAULT_MAX_SEGMENT_LENGTH}"
-    )
+    max_segment_length_help = f"max allowed segment length in meters; default: {DEFAULT_MAX_SEGMENT_LENGTH}"
 
     parser = argparse.ArgumentParser(
         prog="geodense",
@@ -114,16 +112,12 @@ def main() -> None:
     )
     densify_parser.add_argument(
         "input_file",
-        type=lambda x: is_json_file_arg(
-            parser, x, "input_file", exist_required=FileRequired.exist
-        ),
+        type=lambda x: is_json_file_arg(parser, x, "input_file", exist_required=FileRequired.exist),
         help=input_file_help,
     )
     densify_parser.add_argument(
         "output_file",
-        type=lambda x: is_json_file_arg(
-            parser, x, "output_file", exist_required=FileRequired.either
-        ),
+        type=lambda x: is_json_file_arg(parser, x, "output_file", exist_required=FileRequired.either),
         help="output file path",
     )
 
@@ -150,9 +144,7 @@ def main() -> None:
         help="overwrite output file if exists",
     )
 
-    densify_parser.add_argument(
-        "-v", "--verbose", action="store_true", default=False, help=verbose_help
-    )
+    densify_parser.add_argument("-v", "--verbose", action="store_true", default=False, help=verbose_help)
 
     densify_parser.add_argument(
         "--src-crs",
@@ -173,9 +165,7 @@ def main() -> None:
     )
     check_density_parser.add_argument(
         "input_file",
-        type=lambda x: is_json_file_arg(
-            parser, x, "input_file", exist_required=FileRequired.exist
-        ),
+        type=lambda x: is_json_file_arg(parser, x, "input_file", exist_required=FileRequired.exist),
         help=input_file_help,
     )
     check_density_parser.add_argument(
@@ -206,9 +196,7 @@ def main() -> None:
         required=False,
         help="density-check report path, when omitted a temp file will be used. Report is only generated when density-check fails.",
         metavar="FILE_PATH",
-        type=lambda x: is_json_file_arg(
-            parser, x, "density-check-report-path", FileRequired.either
-        ),
+        type=lambda x: is_json_file_arg(parser, x, "density-check-report-path", FileRequired.either),
     )
     check_density_parser.add_argument(
         "--overwrite",
@@ -217,9 +205,7 @@ def main() -> None:
         default=False,
         help="overwrite density-check report if exists",
     )
-    check_density_parser.add_argument(
-        "-v", "--verbose", action="store_true", default=False, help=verbose_help
-    )
+    check_density_parser.add_argument("-v", "--verbose", action="store_true", default=False, help=verbose_help)
     check_density_parser.set_defaults(func=check_density_cmd)
 
     parser._positionals.title = "commands"
@@ -249,7 +235,9 @@ def is_json_file_arg(
     exist_required: FileRequired,
 ) -> str:
     _, file_ext = os.path.splitext(arg)
-    unsupported_file_extension_msg = "unsupported file extension of {input_file}, received: {ext}, expected one of: {supported_ext}"
+    unsupported_file_extension_msg = (
+        "unsupported file extension of {input_file}, received: {ext}, expected one of: {supported_ext}"
+    )
     if arg != "-" and file_ext not in SUPPORTED_FILE_FORMATS["GeoJSON"]:
         parser.error(
             unsupported_file_extension_msg.format(
@@ -261,11 +249,7 @@ def is_json_file_arg(
     if (
         exist_required != FileRequired.either
         and arg != "-"
-        and (
-            not os.path.isfile(arg)
-            if exist_required == FileRequired.exist
-            else os.path.isfile(arg)
-        )
+        and (not os.path.isfile(arg) if exist_required == FileRequired.exist else os.path.isfile(arg))
     ):
         if exist_required:
             parser.error(f"{arg_name} {arg} does not exist")

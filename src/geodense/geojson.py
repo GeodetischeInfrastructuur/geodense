@@ -32,11 +32,7 @@ class CrsFeatureCollection(FeatureCollection):
     def get_crs_auth_code(self: "CrsFeatureCollection") -> str | None:
         if self.crs is None:
             return None
-        result = re.search(
-            r"^urn:ogc:def:crs:(.*?):.*?:(.*?)$", self.crs.properties.name
-        )
+        result = re.search(r"^urn:ogc:def:crs:(.*?):.*?:(.*?)$", self.crs.properties.name)
         if result is None:
-            raise GeodenseError(
-                f"unable to retrieve crs_auth_code from crs.properties.name {self.crs.properties.name}"
-            )
+            raise GeodenseError(f"unable to retrieve crs_auth_code from crs.properties.name {self.crs.properties.name}")
         return f"{result.group(1)}:{result.group(2)}"
