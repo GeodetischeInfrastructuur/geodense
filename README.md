@@ -106,7 +106,7 @@ Create a new build with:
 
 ```sh
 rm -rf dist/* # clean dist folder before build
-python -m build
+uv build --wheel
 ```
 
 Check wheel contains expected files:
@@ -117,18 +117,8 @@ tree geodense-whl
 rm -rf geodense-whl
 ```
 
-Check whether package description will render properly on PyPI:
-
-```sh
-twine check dist/*
-```
-
-Upload release to pypi:
-
-```sh
-twine upload -r testpypi dist/*
-```
+See [.github/python-publish.yml](.github/python-publish.yml) for how to build an publish package on [PyPI](https://pypi.org/).
 
 > **Note:** requires
 > [`~/.pypirc`](https://packaging.python.org/en/latest/specifications/pypirc/)
-> file with API token (when 2FA is enabled on PyPi).
+> file with API token (when 2FA is enabled on [PyPI](https://pypi.org/)).
