@@ -13,24 +13,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup conda
-        uses: s-weigand/setup-conda@v1
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
         with:
-          update-conda: true
-          python-version: 3.11
-          conda-channels: anaconda, conda-forge
-      - name: Conda install dependencies
-        run: conda install -c conda-forge pyproj==3.6.0
+          # Install a specific version of uv.
+          version: "0.4.19"
       - name: Install dependencies
         run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install --force-reinstall -e ".[dev]"
+          uv sync
+      - name: Set env PATH
+        run: echo "PATH="$(pwd)/.venv/bin:$PATH"" >> $GITHUB_ENV
+      - name: Set env PROJ_DIR
+        run: echo "PROJ_DIR="$(pwd)/.venv/lib/python${PYTHON_VERSION}/site-packages/pyproj/proj_dir/share/proj"" >> $GITHUB_ENV
       - name: Test with pytest and generate coverage report
         run: |
-          python3 -m coverage run --source=src/geodense -m pytest -v tests
-          python3 -m coverage html -d htmlcov
-          python3 -m coverage json -o htmlcov/coverage.json
-          python3 util.py gen-cov-badge htmlcov/coverage.json htmlcov/badge.json
+          coverage run --source=src/geodense -m pytest -v tests
+          coverage html -d htmlcov
+          coverage json -o htmlcov/coverage.json
+          uv run python3 util.py gen-cov-badge htmlcov/coverage.json htmlcov/badge.json
           ls -lah htmlcov
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4
