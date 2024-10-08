@@ -23,7 +23,7 @@
                 "${workspaceFolder}/out-data/feature.json",
                 "-o",
                 "<",
-                "${workspaceFolder}/linestrings_4326.json",
+                "${workspaceFolder}/tests/data/linestrings_4326.json",
                 "-v"
             ],
             "justMyCode": false

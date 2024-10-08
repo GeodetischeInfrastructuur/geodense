@@ -61,9 +61,7 @@ def geometry_collection_feature_gj(test_dir):
 
 @pytest.fixture
 def linestring_feature_multiple_linesegments(test_dir):
-    with open(
-        os.path.join(test_dir, "data", "linestring_feature_multiple_linesegments.json")
-    ) as f:
+    with open(os.path.join(test_dir, "data", "linestring_feature_multiple_linesegments.json")) as f:
         return textio_to_geojson(f)
 
 

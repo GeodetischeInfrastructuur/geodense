@@ -34,13 +34,9 @@ projected coordinate reference systems, crs {self.src_crs} is a geographic crs"
             base_crs = self._get_base_crs()
             self.transformer = Transformer.from_crs(src_crs, base_crs, always_xy=True)
             _geod = self.src_crs.get_geod()
-            self.back_transformer = Transformer.from_crs(
-                base_crs, src_crs, always_xy=True
-            )
+            self.back_transformer = Transformer.from_crs(base_crs, src_crs, always_xy=True)
         else:
-            raise GeodenseError(
-                "unexpected crs encountered, crs is neither geographic nor projected"
-            )
+            raise GeodenseError("unexpected crs encountered, crs is neither geographic nor projected")
         if _geod is None:
             raise GeodenseError(self.geod_empty_exc_message)
         self.geod = _geod
@@ -61,17 +57,11 @@ projected coordinate reference systems, crs {self.src_crs} is a geographic crs"
         if crs_dict["type"] == "ProjectedCRS":
             base_crs_id = self.src_crs.to_json_dict()["base_crs"]["id"]
         elif crs_dict["type"] == "CompoundCRS":
-            projected_crs = next(
-                x for x in crs_dict["components"] if x["type"] == "ProjectedCRS"
-            )
+            projected_crs = next(x for x in crs_dict["components"] if x["type"] == "ProjectedCRS")
             base_crs_id = projected_crs["base_crs"]["id"]
         return ProjCrs.from_authority(base_crs_id["authority"], base_crs_id["code"])
 
     def get_coord_precision(self: "DenseConfig") -> int:
         if self.src_crs is None:
             raise GeodenseError("DensifyConfig.source_crs is None")
-        return (
-            DEFAULT_PRECISION_DEGREES
-            if self.src_crs.is_geographic
-            else DEFAULT_PRECISION_METERS
-        )
+        return DEFAULT_PRECISION_DEGREES if self.src_crs.is_geographic else DEFAULT_PRECISION_METERS

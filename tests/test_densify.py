@@ -74,9 +74,7 @@ def test_linestring_d10_no_op(linestring_d10_feature_gj):
     feature_t_in_proj = densify_geojson_object(c_in_proj, feature)
 
     assert len(feature_t.geometry.coordinates) == len(feature.geometry.coordinates)
-    assert len(feature_t_in_proj.geometry.coordinates) == len(
-        feature.geometry.coordinates
-    )
+    assert len(feature_t_in_proj.geometry.coordinates) == len(feature.geometry.coordinates)
 
 
 def test_linestring_transformed(linestring_feature_gj):
@@ -151,9 +149,7 @@ def test_maxlinesegment_param(linestring_feature_gj):
     feature_t_200 = densify_geojson_object(c_200, feature)
     feature_t_1000 = densify_geojson_object(c_1000, feature)
 
-    assert len(feature_t_200.geometry.coordinates) > len(
-        feature_t_1000.geometry.coordinates
-    )
+    assert len(feature_t_200.geometry.coordinates) > len(feature_t_1000.geometry.coordinates)
 
 
 @pytest.mark.parametrize(
@@ -305,7 +301,7 @@ def test_densify_file_output_file_exists_raises(test_dir, overwrite, expectation
             "EPSG:999999928992",
             pytest.raises(
                 pyproj.exceptions.CRSError,
-                match=r"Invalid projection: EPSG:999999928992: \(Internal Proj Error: proj_create: crs not found\)",
+                match=r"Invalid projection: EPSG:999999928992: \(Internal Proj Error: proj_create: crs not found: EPSG:999999928992\)",
             ),
         ),
         ("EPSG:28992", does_not_raise()),
@@ -323,7 +319,9 @@ def test_point_raises_warning_and_noop(test_dir, tmpdir, caplog):
     output_file = os.path.join(tmpdir, "geometry.json")
     densify_file(input_file, output_file, src_crs="EPSG:28992")
     output = caplog.text
-    expected_warning = r"WARNING .* GeoJSON contains \(Multi\)Point geometries, cannot run densify on \(Multi\)Point geometries.*"
+    expected_warning = (
+        r"WARNING .* GeoJSON contains \(Multi\)Point geometries, cannot run densify on \(Multi\)Point geometries.*"
+    )
     assert re.match(
         expected_warning, output
     ), f"stderr expected message is: '{expected_warning}', actual message was: '{output}'"
@@ -332,8 +330,7 @@ def test_point_raises_warning_and_noop(test_dir, tmpdir, caplog):
         feature_gc = textio_to_geojson(in_f)
         feature_gc_t = textio_to_geojson(out_f)
         assert (
-            feature_gc.geometry.geometries[0].coordinates
-            == feature_gc_t.geometry.geometries[0].coordinates
+            feature_gc.geometry.geometries[0].coordinates == feature_gc_t.geometry.geometries[0].coordinates
         )  # assert point geom coords the same
 
 
@@ -342,7 +339,9 @@ def test_densify_file_json_no_crs_outputs_message_stderr(caplog, test_dir, tmpdi
     output_file = os.path.join(tmpdir, "geometry.json")
     densify_file(input_file, output_file)
     output = caplog.text
-    expected_warning = r"WARNING .* unable to determine source CRS for file .*geometry-4326-no-crs.json, assumed CRS is OGC:CRS84\n"
+    expected_warning = (
+        r"WARNING .* unable to determine source CRS for file .*geometry-4326-no-crs.json, assumed CRS is OGC:CRS84\n"
+    )
     assert re.match(
         expected_warning, output
     ), f"stderr expected message is: {expected_warning}, actual message was: {output}"

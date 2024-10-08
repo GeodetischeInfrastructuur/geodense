@@ -16,14 +16,14 @@ transformations.
 Implementation based on [*Eenduidige transformatie van grenzen tussen ETRS89 en
 RD*](https://gnss-data.kadaster.nl/misc/docs/langelijnenadvies.pdf)
 
-Requires Python v3.11 or higher.
+Requires Python v3.12 or higher.
 
 Depends on:
 
-- `pyproj ~= 3.6.0` -> [requires PROJ
-  9+](https://pyproj4.github.io/pyproj/stable/installation.html#installing-from-source)
-- `shapely ~= 2.0.2` -> [requires GEOS >=
-  3.5](https://shapely.readthedocs.io/en/stable/index.html#requirements)
+- `pyproj ~= 3.7.0` -> [requires libproj>=9.2](https://pyproj4.github.io/pyproj/stable/installation.html)
+- `shapely ~= 2.0.6` -> [requires libgeos>=3.9](https://shapely.readthedocs.io/en/stable/index.html)
+
+Installation of binary dependencies (libproj, libgeos) is done through Python package management (`uv`, `pip`), since [PyPI](https://pypi.org/) has binary distributions available for `pyproj` and `shapely`.
 
 ## Usage CLI
 
@@ -62,12 +62,18 @@ issue tracker first.
 
 ## Development
 
-Install/uninstall geodense for development, including dev dependencies (run from
-root of repository):
+Project uses [uv](https://docs.astral.sh/uv/) for package management. To get started install `uv` and run:
+
+Install dev dependencies with:
 
 ```sh
-pip install -e ".[dev]"
-pip uninstall geodense
+uv sync
+```
+
+Enable [pre-commit](https://pre-commit.com/) hooks with:
+
+```sh
+pre-commit install
 ```
 
 ### Tests
@@ -75,13 +81,13 @@ pip uninstall geodense
 Run tests:
 
 ```sh
-python3 -m pytest tests/
+pytest tests/
 ```
 
 Check test coverage:
 
 ```sh
-python3 -m coverage run -p --source=src/geodense -m pytest -v tests && python3 -m coverage report --data-file $(ls -t  .coverage.* | head -1)
+coverage run -p --source=src/geodense -m pytest -v tests && python3 -m coverage report --data-file $(ls -t  .coverage.* | head -1)
 ```
 
 ### Create release

@@ -1,21 +1,16 @@
 name: Generate coverage report
-
 on:
   push:
     branches:
-    - main
-
+      - main
 jobs:
   generate_coverage:
     name: Generate Coverage Report
-
     permissions:
       contents: write
       pages: write
       id-token: write
-
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
       - name: Setup conda
@@ -24,15 +19,12 @@ jobs:
           update-conda: true
           python-version: 3.11
           conda-channels: anaconda, conda-forge
-
       - name: Conda install dependencies
         run: conda install -c conda-forge pyproj==3.6.0
-
       - name: Install dependencies
         run: |
           python3 -m pip install --upgrade pip
           python3 -m pip install --force-reinstall -e ".[dev]"
-
       - name: Test with pytest and generate coverage report
         run: |
           python3 -m coverage run --source=src/geodense -m pytest -v tests
@@ -40,7 +32,6 @@ jobs:
           python3 -m coverage json -o htmlcov/coverage.json
           python3 util.py gen-cov-badge htmlcov/coverage.json htmlcov/badge.json
           ls -lah htmlcov
-
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4
         with:
