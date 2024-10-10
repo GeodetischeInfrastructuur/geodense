@@ -301,7 +301,7 @@ def test_densify_file_output_file_exists_raises(test_dir, overwrite, expectation
             "EPSG:999999928992",
             pytest.raises(
                 pyproj.exceptions.CRSError,
-                match=r"Invalid projection: EPSG:999999928992: \(Internal Proj Error: proj_create: crs not found: EPSG:999999928992\)",
+                match=r"Invalid projection: EPSG:999999928992: \(Internal Proj Error: proj_create: crs not found\)",
             ),
         ),
         ("EPSG:28992", does_not_raise()),
