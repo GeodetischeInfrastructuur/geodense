@@ -30,8 +30,7 @@ jobs:
           coverage run --source=src/geodense -m pytest -v tests
           coverage html -d htmlcov
           coverage json -o htmlcov/coverage.json
-          uv run python3 util.py gen-cov-badge htmlcov/coverage.json htmlcov/badge.json
-          ls -lah htmlcov
+          uv run util.py gen-cov-badge htmlcov/coverage.json htmlcov/badge.json
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4
         with:

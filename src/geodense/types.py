@@ -24,15 +24,15 @@ from geodense.geojson import CrsFeatureCollection
 
 T = TypeVar("T")
 
-GeojsonGeomNoGeomCollection: TypeAlias = Point | MultiPoint | LineString | MultiLineString | Polygon | MultiPolygon  # noqa: UP040
+GeojsonGeomNoGeomCollection: TypeAlias = Point | MultiPoint | LineString | MultiLineString | Polygon | MultiPolygon
 
-GeojsonObject: TypeAlias = Feature | CrsFeatureCollection | Geometry | GeometryCollection  # noqa: UP040
+GeojsonObject: TypeAlias = Feature | CrsFeatureCollection | Geometry | GeometryCollection
 
-GeojsonCoordinates: TypeAlias = (  # noqa: UP040
+GeojsonCoordinates: TypeAlias = (
     Position | MultiPointCoords | LineStringCoords | MultiLineStringCoords | MultiPolygonCoords
 )
 
 
-Nested: TypeAlias = Sequence[T | None | "Nested"]  # noqa: UP040
+Nested: TypeAlias = Sequence[T | None | "Nested"]
 
 ReportLineString = tuple[float, tuple[Position, Position]]
