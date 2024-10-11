@@ -15,9 +15,9 @@ Enable [pre-commit](https://pre-commit.com/) hooks with:
 pre-commit install
 ```
 
-## direnv config
+### direnv config
 
-Repository also contains a [`.direnv`](https://direnv.net/) config file, which automatically activates the `uv` managed
+Repository also contains a [`.envrc`](https://direnv.net/) config file, which automatically activates the `uv` managed
 virtual environment. See the [direnv wiki](https://github.com/direnv/direnv/wiki/Python#uv) for how to set this up.
 
 ## Tests
