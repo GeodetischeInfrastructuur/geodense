@@ -31,7 +31,7 @@ jobs:
           coverage html -d htmlcov
           coverage json -o htmlcov/coverage.json
           uv run util.py gen-cov-badge htmlcov/coverage.json htmlcov/badge.json
-          ls -lah htmlcov
+          rm htmlcov/.gitignore
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4
         with:
