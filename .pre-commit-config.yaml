@@ -19,3 +19,20 @@ repos:
       - id: mypy
         additional_dependencies:
           - pydantic
+  - repo: local
+    hooks:
+      - id: pytest-check
+        name: pytest-check
+        stages: [pre-commit]
+        types: [python]
+        entry: pytest
+        language: system
+        pass_filenames: false
+  - repo: https://github.com/executablebooks/mdformat
+    rev: 0.7.17  # Use the ref you want to point at
+    hooks:
+      - id: mdformat
+        # Optionally add plugins
+        additional_dependencies:
+          - mdformat-gfm
+          - mdformat-black
