@@ -31,7 +31,7 @@ pytest tests/
 Check test coverage:
 
 ```sh
-coverage run -p --source=src/geodense -m pytest -v tests && python3 -m coverage report --data-file $(ls -t  .coverage.* | head -1)
+coverage run -p --source=src/geodense -m pytest -v tests && coverage report --data-file $(ls -t  .coverage.* | head -1)
 ```
 
 ## Creating release
