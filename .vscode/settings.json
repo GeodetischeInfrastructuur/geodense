@@ -14,4 +14,10 @@
     "[python]": {
         "editor.defaultFormatter": "charliermarsh.ruff"
     },
+    "workbench.colorCustomizations": {
+        "activityBar.background": "#0C3427",
+        "titleBar.activeBackground": "#114936",
+        "titleBar.activeForeground": "#F4FDFA"
+    },
+    "python-envs.pythonProjects": [],
 }
