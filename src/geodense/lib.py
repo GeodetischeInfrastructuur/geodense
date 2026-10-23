@@ -116,7 +116,7 @@ def check_density_linestring(
         if densify_config.in_projection:
             linesegment_dist = _cartesian_distance(a_2d, b_2d)
         else:
-            if densify_config.src_crs.is_projected:  # only convert to basegeographic crs if src_proj is projected
+            if densify_config.is_projected:  # only convert to basegeographic crs if src_proj is projected
                 transformer = densify_config.transformer
                 if transformer is None:
                     raise GeodenseError("transformer cannot be None when src_crs.is_projected=True")
@@ -367,7 +367,7 @@ def interpolate_geodesic(a: Position, b: Position, densify_config: DenseConfig) 
 
     transformer = densify_config.transformer
 
-    if densify_config.src_crs.is_projected:  # only convert to basegeographic crs if src_proj is projected
+    if densify_config.is_projected:  # only convert to basegeographic crs if src_proj is projected
         if transformer is None:
             raise GeodenseError("transformer cannot be None when src_crs.is_projected=True")
         # technically the following transform call is a converion and not a transformation, since crs->base-crs will be a conversion in most cases
@@ -401,7 +401,7 @@ def interpolate_geodesic(a: Position, b: Position, densify_config: DenseConfig) 
 
         def optional_back_transform(lon: float, lat: float) -> Position2D:
             """technically should be named optional_back_convert, since crs->base crs is (mostly) a conversion and not a transformation"""
-            if densify_config.src_crs.is_projected:
+            if densify_config.is_projected:
                 if densify_config.back_transformer is None:
                     raise GeodenseError("back_transformer cannot be None when src_crs.is_projected=True")
                 _result = densify_config.back_transformer.transform(lon, lat)
@@ -605,7 +605,7 @@ def _add_vertices_to_line_segment(linestring: LineStringCoords, coord_index: int
     a = linestring[coord_index]
     b = linestring[coord_index + 1]
 
-    prec = densify_config.get_coord_precision()
+    prec = densify_config.coord_precision
 
     if not densify_config.in_projection:
         linestring_coords = interpolate_geodesic(a, b, densify_config)
