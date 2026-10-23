@@ -118,6 +118,22 @@ ______________________________________________________________________
 
 Do **after** Workstream A. Keep each item behind its own measurement.
 
+> **Status update (after A landed):**
+> - **B1 (orjson): rejected.** `json.loads` is only ~36 ms; the parse cost is
+>   geojson-pydantic validation, not JSON decoding. orjson showed no measurable
+>   gain on decode and cannot match the `indent=1`/`indent=4` output on encode. Not
+>   worth a dependency.
+> - **B2 (reduce load-time validation): rejected as scoped.** Load-time validation
+>   is only ~165 ms, and the realistic save is ~150 ms (~14% of densify) against
+>   real risk: `model_construct()` does not build nested models (breaks the
+>   `isinstance(..., Feature/CrsFeatureCollection)` checks throughout `lib.py`), and
+>   skipping validation drops rejection of malformed input. Only worth doing fused
+>   with B3 as one raw-representation rewrite — deferred.
+> - **New finding → see Workstream C.** Profiling the *densify* phase (the real
+>   ~1.06 s cost, not parsing) shows the bottleneck is per-point work inside the
+>   interpolation loop, independent of the parsing library. That is the better
+>   target and is lower risk than B2/B3.
+
 ### B1. Faster JSON load/dump with `orjson` (low risk)
 
 - `textio_to_geojson()` uses `json.loads(src.read())`; outputs use `model_dump_json(indent=...)`. Replace raw JSON
@@ -151,6 +167,52 @@ directly via `orjson` from that representation, preserving `exclude_none` semant
 - No new mandatory dependency unless it provides a clear, measured gain.
 
 ______________________________________________________________________
+
+## 3b. Workstream C — Optimize the densify inner loop (NEW, PRIMARY next step)
+
+Discovered by profiling the densify phase after A (gemeenten-40.json, ~1.37 s
+densify under cProfile). The cost is per-point work in the interpolation loop and
+is independent of the parsing library. Breakdown (cumulative):
+
+- `interpolate_geodesic` ~0.75 s — of which pyproj `transformer.transform` is
+  ~0.31 s, called **one point at a time** 200k times.
+- `_round_coordinates` ~0.34 s — `round()` called 400k times, rebuilding NamedTuples.
+- `DenseConfig.get_coord_precision` + `CRS.is_geographic` + `CRS.is_projected`
+  ~0.18 s combined — these are **constant per `DenseConfig`** yet recomputed ~98k
+  times inside the hot loop (pyproj `is_geographic`/`is_projected` are not cheap).
+
+### C1. Cache per-config constants on `DenseConfig` — LOW RISK, DO FIRST
+In `src/geodense/models.py`, compute once in `__init__` and store as attributes:
+`is_projected`, `is_geographic`, and the coord precision (`get_coord_precision`
+result). Replace the repeated `self.src_crs.is_projected` /
+`self.src_crs.is_geographic` / `get_coord_precision()` lookups in the `lib.py` hot
+paths (`interpolate_geodesic`, `check_density_linestring`, `_add_vertices_to_line_segment`,
+`interpolate_src_proj`) with the cached values. Pure hoisting of invariants; output
+must be identical. Expected ~0.15-0.18 s off densify at near-zero risk.
+
+### C2. Batch the pyproj transform calls — MEDIUM RISK
+`interpolate_geodesic` transforms `a` and `b` individually, and the forward
+intermediate points come back and are back-transformed per point. pyproj
+`Transformer.transform` accepts arrays and is far cheaper amortized than per-call.
+Restructure so the a/b conversion and the back-transform of intermediate points use
+array calls. Must preserve numerical output exactly (same rounding, same order) —
+gate hard on the golden-output test; if batching changes any output byte, keep the
+scalar path.
+
+### C3. Reduce `_round_coordinates` overhead — LOW/MEDIUM RISK
+Called 400k times. Avoid re-wrapping when already at precision, and avoid the
+`len(position)` dimensionality re-check per call where the dimensionality is already
+known by the caller. Keep output byte-identical.
+
+### Acceptance criteria (Workstream C)
+- Golden-output test stays byte-for-byte green (non-negotiable).
+- Full suite + benchmark invariants green.
+- Measurable densify reduction reported from
+  `GEODENSE_BENCH=1 pytest tests/test_benchmark.py::test_benchmark_phases -s`.
+- C1 first (safe), then C2/C3 each behind its own measurement; skip any that don't
+  measurably help.
+
+---
 
 ## 4. Shared deliverable — benchmark + golden-output harness (DO FIRST)
 

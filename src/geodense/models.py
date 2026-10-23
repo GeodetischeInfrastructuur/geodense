@@ -20,17 +20,19 @@ class DenseConfig:
         in_projection: bool = False,
     ) -> None:
         self.src_crs = src_crs
+        self.is_geographic = src_crs.is_geographic
+        self.is_projected = src_crs.is_projected
 
-        if self.src_crs.is_geographic and in_projection:
+        if self.is_geographic and in_projection:
             raise GeodenseError(
                 f"in_projection can only be used with \
 projected coordinate reference systems, crs {self.src_crs} is a geographic crs"
             )
         self.back_transformer = None
-        if self.src_crs.is_geographic:
+        if self.is_geographic:
             _geod = self.src_crs.get_geod()
             self.transformer = None
-        elif self.src_crs.is_projected:
+        elif self.is_projected:
             base_crs = self._get_base_crs()
             self.transformer = Transformer.from_crs(src_crs, base_crs, always_xy=True)
             _geod = self.src_crs.get_geod()
@@ -45,6 +47,7 @@ projected coordinate reference systems, crs {self.src_crs} is a geographic crs"
         self.max_segment_length = abs(
             max_segment_length or DEFAULT_MAX_SEGMENT_LENGTH
         )  # when max_segment_length == None -> DEFAULT_MAX_SEGMENT_LENGTH
+        self.coord_precision = DEFAULT_PRECISION_DEGREES if self.is_geographic else DEFAULT_PRECISION_METERS
 
     def _get_base_crs(self: "DenseConfig") -> ProjCrs:
         if self.src_crs is None:
@@ -64,4 +67,4 @@ projected coordinate reference systems, crs {self.src_crs} is a geographic crs"
     def get_coord_precision(self: "DenseConfig") -> int:
         if self.src_crs is None:
             raise GeodenseError("DensifyConfig.source_crs is None")
-        return DEFAULT_PRECISION_DEGREES if self.src_crs.is_geographic else DEFAULT_PRECISION_METERS
+        return self.coord_precision
