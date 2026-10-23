@@ -621,19 +621,10 @@ def _add_vertices_to_line_segment(linestring: LineStringCoords, coord_index: int
 
 
 def _round_coordinates(position: Position, precision: int) -> Position:
-    result: Position = Position2D(
-        longitude=round(position.longitude, precision),
-        latitude=round(position.latitude, precision),
-    )
-
     if len(position) == THREE_DIMENSIONAL:
-        position_3d = cast(Position3D, position)
-        result = Position3D(
-            longitude=result.longitude,
-            latitude=result.latitude,
-            altitude=round(position_3d.altitude, DEFAULT_PRECISION_METERS),
-        )
-    return result
+        p3 = cast(Position3D, position)
+        return Position3D(round(p3[0], precision), round(p3[1], precision), round(p3[2], DEFAULT_PRECISION_METERS))
+    return Position2D(round(position[0], precision), round(position[1], precision))
 
 
 def _get_geometry_type(
