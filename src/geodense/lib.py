@@ -53,6 +53,7 @@ class InfValCoordinateError(Exception):
 
 
 def densify_geojson_object(densify_config: DenseConfig, geojson_obj: GeojsonObject) -> GeojsonObject:
+    """Mutates the input in place and returns it; copy the object first if you need to retain the original."""
     validate_geom_type(geojson_obj, "densify")
     _densify_geometry = partial(densify_geometry, densify_config)
     return traverse_geojson_geometries(geojson_obj, _densify_geometry)
@@ -293,6 +294,7 @@ def traverse_geojson_geometries(
     geometry_callback: Callable[[Geometry], None] | None = None,
     node_callback: Callable | None = None,
 ) -> Feature | CrsFeatureCollection | Geometry:
+    """Mutates the input in place and returns it; copy the object first if you need to retain the original."""
     _self: Callable[
         [Feature | CrsFeatureCollection | Geometry],
         Feature | CrsFeatureCollection | Geometry,
@@ -302,42 +304,32 @@ def traverse_geojson_geometries(
         node_callback=node_callback,
     )
 
-    _geojson = geojson.model_copy(deep=True)
-
     if isinstance(geojson, Feature):
         feature = cast(Feature, geojson)
-        _feature = cast(Feature, _geojson)
         geom = cast(GeojsonGeomNoGeomCollection, feature.geometry)
         try:
-            _feature.geometry = _self(geom)
+            feature.geometry = _self(geom)
         except InfValCoordinateError as _:
-            _feature.geometry = None
+            feature.geometry = None
 
     elif isinstance(geojson, CrsFeatureCollection):
-        _feature_collection: CrsFeatureCollection = cast(CrsFeatureCollection, _geojson)
-        _feature_collection.features = list(map(_self, _feature_collection.features))
+        feature_collection = cast(CrsFeatureCollection, geojson)
+        feature_collection.features = list(map(_self, feature_collection.features))
     elif isinstance(geojson, GeometryCollection):
-        _geometry_collection = cast(GeometryCollection, _geojson)
-        __self = cast(
-            Callable[
-                [Geometry],
-                Geometry,
-            ],
-            _self,
-        )  # cast to more specific type, to fix mypy error
-        _geometry_collection.geometries = list(map(__self, _geometry_collection.geometries))
+        geometry_collection = cast(GeometryCollection, geojson)
+        __self = cast(Callable[[Geometry], Geometry], _self)
+        geometry_collection.geometries = list(map(__self, geometry_collection.geometries))
     elif isinstance(
         geojson,
         Point | MultiPoint | LineString | MultiLineString | Polygon | MultiPolygon,
     ):
         if geometry_callback is not None:
-            _geom = cast(GeojsonGeomNoGeomCollection, _geojson)
-            geometry_callback(_geom)
+            geometry_callback(cast(GeojsonGeomNoGeomCollection, geojson))
 
     if node_callback:
-        node_callback(_geojson)
+        node_callback(geojson)
 
-    return _geojson
+    return geojson
 
 
 def transform_geojson_geometries(

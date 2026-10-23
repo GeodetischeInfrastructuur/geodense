@@ -24,3 +24,7 @@ flowchart
     style output_error stroke: red,stroke-width:2px
     style output stroke: green,stroke-width:2px
 ```
+
+## Library usage note
+
+`densify_geojson_object` (and `traverse_geojson_geometries`) mutate the input in place and return it; copy the object first (e.g. `obj.model_copy(deep=True)`) if you need to retain the original.
