@@ -190,14 +190,28 @@ paths (`interpolate_geodesic`, `check_density_linestring`, `_add_vertices_to_lin
 `interpolate_src_proj`) with the cached values. Pure hoisting of invariants; output
 must be identical. Expected ~0.15-0.18 s off densify at near-zero risk.
 
-### C2. Batch the pyproj transform calls — MEDIUM RISK
-`interpolate_geodesic` transforms `a` and `b` individually, and the forward
-intermediate points come back and are back-transformed per point. pyproj
-`Transformer.transform` accepts arrays and is far cheaper amortized than per-call.
-Restructure so the a/b conversion and the back-transform of intermediate points use
-array calls. Must preserve numerical output exactly (same rounding, same order) —
-gate hard on the golden-output test; if batching changes any output byte, keep the
-scalar path.
+### C2. Batch the pyproj transform calls — EVALUATED, REJECTED
+`interpolate_geodesic` transforms `a`/`b` individually and back-transforms the
+intermediate points per point. pyproj `Transformer.transform` accepts arrays.
+
+**Outcome: rejected for this workload.** Measured findings (all gated on
+golden-output, which stayed byte-identical throughout):
+- Array transform only wins for larger batches: per-point vs array (20k reps) —
+  n=2 scalar 0.038s / batch 0.064s (**scalar wins**); n=5 ~tie; n=20 0.286 vs
+  0.160; n=100 2.263 vs 0.817 (batch 2.8x).
+- But the real distribution on gemeenten-40.json is tiny: of 97791 segments,
+  **median 0 / mean 0.05 intermediate points**, 97459 segments have ≤2 points and
+  only 205 have ≥5. So batching the back-transform is net neutral-to-negative.
+- Batching the forward a/b conversion into one 2-point array call made densify
+  *worse* (~967ms → ~1680ms): array-wrapping overhead exceeds the saving at n=2.
+  The ~196k forward `transform` calls are the dominant transform cost but can't be
+  batched profitably within a single 2-point segment.
+- A threshold guard (batch only when n≥~5) would help only ~0.2% of segments here —
+  not worth the added branching. Per this plan's own rule ("skip any that don't
+  measurably help"), C2 was reverted.
+- Only a cross-segment restructure (collect all endpoints across the whole input
+  and transform once) could batch the forward calls — that is effectively the
+  C/B3 raw-representation rewrite and is out of scope here.
 
 ### C3. Reduce `_round_coordinates` overhead — LOW/MEDIUM RISK
 Called 400k times. Avoid re-wrapping when already at precision, and avoid the
