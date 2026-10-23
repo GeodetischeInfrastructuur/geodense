@@ -1,0 +1,147 @@
+{
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                    [
+                        138871.5188817319,
+                        597389.9937493266,
+                        10.0
+                    ],
+                    [
+                        140036.12256928819,
+                        592678.0400250106
+                    ]
+                ]
+            },
+            "properties": {
+                "segment_length": 4853.662375413214
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                    [
+                        140036.12256928819,
+                        592678.0400250106
+                    ],
+                    [
+                        145468.0225420569,
+                        593606.1842928205
+                    ]
+                ]
+            },
+            "properties": {
+                "segment_length": 5510.554765253627
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                    [
+                        145468.0225420569,
+                        593606.1842928205
+                    ],
+                    [
+                        142646.4325526482,
+                        597849.3457810137
+                    ]
+                ]
+            },
+            "properties": {
+                "segment_length": 5095.578453137242
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                    [
+                        142646.4325526482,
+                        597849.3457810137
+                    ],
+                    [
+                        138871.5188817319,
+                        597389.9937493266,
+                        10.0
+                    ]
+                ]
+            },
+            "properties": {
+                "segment_length": 3802.6817937566834
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                    [
+                        266341.9663201012,
+                        624010.5466340153
+                    ],
+                    [
+                        259248.56824272784,
+                        626424.4823948606
+                    ]
+                ]
+            },
+            "properties": {
+                "segment_length": 7491.834603592221
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                    [
+                        259248.56824272784,
+                        626424.4823948606
+                    ],
+                    [
+                        261291.27833159253,
+                        618975.7930648306
+                    ]
+                ]
+            },
+            "properties": {
+                "segment_length": 7722.683421417716
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                    [
+                        261291.27833159253,
+                        618975.7930648306
+                    ],
+                    [
+                        266341.9663201012,
+                        624010.5466340153
+                    ]
+                ]
+            },
+            "properties": {
+                "segment_length": 7130.532280170887
+            }
+        }
+    ],
+    "crs": {
+        "properties": {
+            "name": "urn:ogc:def:crs:EPSG::28992"
+        },
+        "type": "name"
+    },
+    "name": "density-check-report"
+}

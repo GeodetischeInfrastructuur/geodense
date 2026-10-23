@@ -1,0 +1,33 @@
+{
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                    [
+                        156264.90635984257,
+                        601302.5889194933,
+                        10.101010321413241
+                    ],
+                    [
+                        165681.9644757935,
+                        605544.3131644691,
+                        30.10101032141324
+                    ]
+                ]
+            },
+            "properties": {
+                "segment_length": 10327.97099917712
+            }
+        }
+    ],
+    "crs": {
+        "properties": {
+            "name": "urn:ogc:def:crs:EPSG::7415"
+        },
+        "type": "name"
+    },
+    "name": "density-check-report"
+}

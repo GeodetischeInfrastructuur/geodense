@@ -1,0 +1,432 @@
+{
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                    [
+                        5.406223656002991,
+                        53.39804477243776,
+                        10.0
+                    ],
+                    [
+                        5.547933319658282,
+                        53.43605040857778,
+                        20.0
+                    ]
+                ]
+            },
+            "properties": {
+                "segment_length": 10327.94687108272
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                    [
+                        6.022660692186224,
+                        53.194773952398336
+                    ],
+                    [
+                        6.192712288401489,
+                        53.249922001209505
+                    ]
+                ]
+            },
+            "properties": {
+                "segment_length": 12910.212023814014
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                    [
+                        6.192712288401489,
+                        53.249922001209505
+                    ],
+                    [
+                        6.284823569681227,
+                        53.20326288999233
+                    ]
+                ]
+            },
+            "properties": {
+                "segment_length": 8050.301241066814
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                    [
+                        6.561157413518037,
+                        52.943593321269375
+                    ],
+                    [
+                        6.731209009728307,
+                        52.83671861761147
+                    ]
+                ]
+            },
+            "properties": {
+                "segment_length": 16506.342540242214
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                    [
+                        6.731209009728307,
+                        52.83671861761147
+                    ],
+                    [
+                        6.908346089117892,
+                        52.909422083132114
+                    ]
+                ]
+            },
+            "properties": {
+                "segment_length": 14412.531069848437
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                    [
+                        6.206883254708187,
+                        52.29405172888637
+                    ],
+                    [
+                        6.525729997614071,
+                        52.22032015750015
+                    ]
+                ]
+            },
+            "properties": {
+                "segment_length": 23266.524533787066
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                    [
+                        6.525729997614071,
+                        52.22032015750015
+                    ],
+                    [
+                        6.582413863015001,
+                        52.094259737978355
+                    ]
+                ]
+            },
+            "properties": {
+                "segment_length": 14553.331863256906
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                    [
+                        7.099654134843771,
+                        52.15516106608969
+                    ],
+                    [
+                        7.106739618021326,
+                        52.24201863822781
+                    ]
+                ]
+            },
+            "properties": {
+                "segment_length": 9676.87417598546
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                    [
+                        7.106739618021326,
+                        52.24201863822781
+                    ],
+                    [
+                        7.34056056281678,
+                        52.289717970236204
+                    ]
+                ]
+            },
+            "properties": {
+                "segment_length": 16822.293140207497
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                    [
+                        4.485110842977126,
+                        52.25936978748152
+                    ],
+                    [
+                        4.563051157904582,
+                        52.19426797948517
+                    ]
+                ]
+            },
+            "properties": {
+                "segment_length": 8991.011957115792
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                    [
+                        4.563051157904582,
+                        52.19426797948517
+                    ],
+                    [
+                        4.775615653189223,
+                        52.28104918126689
+                    ]
+                ]
+            },
+            "properties": {
+                "segment_length": 17438.619112942717
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                    [
+                        3.712793176720353,
+                        51.52917416043899
+                    ],
+                    [
+                        4.067067335516668,
+                        51.52035732106676
+                    ]
+                ]
+            },
+            "properties": {
+                "segment_length": 24607.180805122087
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                    [
+                        4.067067335516668,
+                        51.52035732106676
+                    ],
+                    [
+                        4.102494751389232,
+                        51.45417659847154
+                    ]
+                ]
+            },
+            "properties": {
+                "segment_length": 7763.427545763103
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                    [
+                        2.919219060993196,
+                        51.30381115593329
+                    ],
+                    [
+                        3.046757758151234,
+                        51.25062302628488
+                    ]
+                ]
+            },
+            "properties": {
+                "segment_length": 10687.173854920991
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                    [
+                        3.046757758151234,
+                        51.25062302628488
+                    ],
+                    [
+                        3.160125488952177,
+                        51.14850692981686
+                    ]
+                ]
+            },
+            "properties": {
+                "segment_length": 13851.101312786195
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                    [
+                        3.160125488952177,
+                        51.14850692981686
+                    ],
+                    [
+                        2.968817443197236,
+                        51.09958876010659
+                    ]
+                ]
+            },
+            "properties": {
+                "segment_length": 14456.972085011763
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                    [
+                        5.937634893946346,
+                        51.00159695781402
+                    ],
+                    [
+                        6.079344557467782,
+                        51.01051387188177
+                    ]
+                ]
+            },
+            "properties": {
+                "segment_length": 9995.738017921152
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                    [
+                        6.079344557467782,
+                        51.01051387188177
+                    ],
+                    [
+                        6.25648163686621,
+                        50.97483593029457
+                    ]
+                ]
+            },
+            "properties": {
+                "segment_length": 13054.575730566516
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                    [
+                        6.25648163686621,
+                        50.97483593029457
+                    ],
+                    [
+                        6.270652603214454,
+                        50.91233352084392
+                    ]
+                ]
+            },
+            "properties": {
+                "segment_length": 7024.18701864548
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                    [
+                        7.068655145965196,
+                        53.606130205323815
+                    ],
+                    [
+                        7.158995056449379,
+                        53.60402812833828
+                    ]
+                ]
+            },
+            "properties": {
+                "segment_length": 5984.6123462802825
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                    [
+                        7.158995056449379,
+                        53.60402812833828
+                    ],
+                    [
+                        7.249334966933042,
+                        53.62294305487141
+                    ]
+                ]
+            },
+            "properties": {
+                "segment_length": 6338.6487798242715
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                    [
+                        7.249334966933042,
+                        53.62294305487141
+                    ],
+                    [
+                        7.213907551056524,
+                        53.6680944189401
+                    ]
+                ]
+            },
+            "properties": {
+                "segment_length": 5544.585273460724
+            }
+        }
+    ],
+    "crs": {
+        "properties": {
+            "name": "urn:ogc:def:crs:OGC::CRS84h"
+        },
+        "type": "name"
+    },
+    "name": "density-check-report"
+}
