@@ -1,3 +1,4 @@
+import copy
 import json
 import os
 import re
@@ -43,13 +44,16 @@ def test_only_points_raises_exception(geojson, expected, request):
 
 def test_geometry_collection_transformed(geometry_collection_gj):
     gc = geometry_collection_gj
+    original = copy.deepcopy(gc)
     c = DenseConfig(pyproj.CRS.from_epsg(28992), 10)
     gc_t = densify_geojson_object(c, gc)
-    assert gc_t != gc
+    assert gc_t is gc
+    assert gc_t != original
 
 
 def test_linestring_d10_transformed(linestring_d10_feature_gj):
     feature = linestring_d10_feature_gj
+    original = copy.deepcopy(feature)
     c = DenseConfig(pyproj.CRS.from_epsg(28992), 10)
 
     feature_t = densify_geojson_object(c, feature)
@@ -57,8 +61,9 @@ def test_linestring_d10_transformed(linestring_d10_feature_gj):
     feature_coords_length = 2
     feature_t_coord_length = 3
 
-    assert feature != feature_t
-    assert len(feature.geometry.coordinates) == feature_coords_length
+    assert feature_t is feature
+    assert feature_t != original
+    assert len(original.geometry.coordinates) == feature_coords_length
     assert len(feature_t.geometry.coordinates) == feature_t_coord_length
 
 
@@ -79,6 +84,7 @@ def test_linestring_d10_no_op(linestring_d10_feature_gj):
 
 def test_linestring_transformed(linestring_feature_gj):
     feature = linestring_feature_gj
+    original = copy.deepcopy(feature)
 
     c = DenseConfig(pyproj.CRS.from_epsg(28992), 1000)
 
@@ -87,8 +93,9 @@ def test_linestring_transformed(linestring_feature_gj):
     feature_coords_length = 2
     feature_t_coord_length = 12
 
-    assert feature != feature_t
-    assert len(feature.geometry.coordinates) == feature_coords_length
+    assert feature_t is feature
+    assert feature_t != original
+    assert len(original.geometry.coordinates) == feature_coords_length
     assert len(feature_t.geometry.coordinates) == feature_t_coord_length
 
 
@@ -117,15 +124,18 @@ def test_densify_3d(linestring_3d_feature_gj):
 
 def test_polygon_with_hole_transformed(polygon_feature_with_holes_gj):
     feature = polygon_feature_with_holes_gj
+    original = copy.deepcopy(feature)
     c = DenseConfig(pyproj.CRS.from_epsg(28992), 1000)
 
     feature_t = densify_geojson_object(c, feature)
 
-    assert feature != feature_t
+    assert feature_t is feature
+    assert feature_t != original
 
 
 def test_linestring_transformed_source_proj(linestring_feature_gj):
     feature = linestring_feature_gj
+    original = copy.deepcopy(feature)
 
     c = DenseConfig(pyproj.CRS.from_epsg(28992), 1000, True)
 
@@ -134,20 +144,22 @@ def test_linestring_transformed_source_proj(linestring_feature_gj):
     feature_coords_length = 2
     feature_t_coord_length = 12
 
-    assert feature != feature_t
-    assert len(feature.geometry.coordinates) == feature_coords_length
+    assert feature_t is feature
+    assert feature_t != original
+    assert len(original.geometry.coordinates) == feature_coords_length
     assert len(feature_t.geometry.coordinates) == feature_t_coord_length
 
 
 def test_maxlinesegment_param(linestring_feature_gj):
     feature = linestring_feature_gj
+    feature_copy = copy.deepcopy(feature)
 
     c_200 = DenseConfig(pyproj.CRS.from_epsg(28992), 200, False)
     c_1000 = DenseConfig(pyproj.CRS.from_epsg(28992), 1000, False)
 
-    # note geom_densify_fun modifies coords in place
+    # densify mutates in place, so use independent copies
     feature_t_200 = densify_geojson_object(c_200, feature)
-    feature_t_1000 = densify_geojson_object(c_1000, feature)
+    feature_t_1000 = densify_geojson_object(c_1000, feature_copy)
 
     assert len(feature_t_200.geometry.coordinates) > len(feature_t_1000.geometry.coordinates)
 
