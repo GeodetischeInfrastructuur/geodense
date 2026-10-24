@@ -14,17 +14,28 @@ license = { text = "MIT" }
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.12",
 ]
 readme = { file = "./README.md", content-type = "text/markdown" }
 dependencies = [
-    "geojson-pydantic>=1,<3",
-    "pyproj~=3.7.0",
+    "geojson-pydantic>=2,<3",
+    # NSGI pyproj: PROJ compiled with the NSGI-modified proj.db + bundled grids.
+    # The version/source are pinned below in [tool.uv.sources]. This build is
+    # cp312/linux_x86_64 only, hence requires-python is locked to 3.12. See
+    # DOCS.md ("NSGI transformations") and the transformations repo doc
+    # "supporting-multiple-python-versions.md" for how to widen this later.
+    "pyproj==3.7.2.post1",
     "rich-argparse~=1.3",
     "shapely>=2.0.6,<2.2.0",
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.12,<3.13"
 dynamic = ["version"]
+
+# geodense is distributed as a wheel on the GitHub releases page (not PyPI),
+# because it pins the NSGI pyproj wheel which is itself only available there.
+# Install/resolve with uv so [tool.uv.sources] below is honoured.
+[tool.uv.sources]
+pyproj = { url = "https://github.com/GeodetischeInfrastructuur/transformations/releases/download/9.7.1-post1-rc17/pyproj-3.7.2.post1-cp312-cp312-linux_x86_64.whl" }
 
 [dependency-groups]
 dev = [
@@ -85,7 +96,7 @@ exclude = [
 
 line-length = 120
 
-target-version = "py310"
+target-version = "py312"
 
 [tool.ruff.lint]
 
