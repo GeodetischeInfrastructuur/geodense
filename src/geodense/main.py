@@ -63,8 +63,6 @@ def check_density_cmd(  # noqa: PLR0913
     src_crs: str | None = None,
     density_check_report_path: str | None = None,
 ) -> None:
-    print(overwrite)
-
     check_status, density_check_report_path, nr_line_segments = check_density_file(
         input_file,
         max_segment_length,
