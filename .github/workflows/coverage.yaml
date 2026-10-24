@@ -3,6 +3,8 @@ on:
   push:
     branches:
       - main
+env:
+  PYTHON_VERSION: "3.12"
 jobs:
   generate_coverage:
     name: Generate Coverage Report

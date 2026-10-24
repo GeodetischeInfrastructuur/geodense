@@ -1,9 +1,11 @@
-name: Build and Publish to PyPI
+name: Build and attach wheel to GitHub release
 on:
   release:
     types: [published]
 permissions:
-  contents: read
+  contents: write  # required to upload assets to the release
+env:
+  PYTHON_VERSION: "3.12"
 jobs:
   deploy:
     runs-on: ubuntu-24.04
@@ -23,8 +25,9 @@ jobs:
         run: echo "PROJ_DIR="$(pwd)/.venv/lib/python${PYTHON_VERSION}/site-packages/pyproj/proj_dir/share/proj"" >> $GITHUB_ENV
       - name: Build package
         run: uv build --wheel
-      - name: Publish package
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_API_TOKEN }}
+      - name: Attach wheel to GitHub release
+        # geodense is distributed via the GitHub releases page, not PyPI,
+        # because it pins the NSGI pyproj wheel which is only published there.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" dist/*.whl --clobber
