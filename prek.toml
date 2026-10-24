@@ -33,7 +33,7 @@ id = "pytest-check"
 name = "pytest-check"
 stages = ["pre-commit"]
 types = ["python"]
-entry = "pytest"
+entry = "uv run pytest"
 language = "system"
 pass_filenames = false
 
