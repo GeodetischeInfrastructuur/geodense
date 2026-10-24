@@ -27,4 +27,5 @@ flowchart
 
 ## Library usage note
 
-`densify_geojson_object` (and `traverse_geojson_geometries`) mutate the input in place and return it; copy the object first (e.g. `obj.model_copy(deep=True)`) if you need to retain the original.
+`densify_geojson_object` (and `traverse_geojson_geometries`) mutate the input in place and return it; copy the object
+first (e.g. `obj.model_copy(deep=True)`) if you need to retain the original.
