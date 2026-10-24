@@ -2,8 +2,8 @@
 
 Purpose
 -------
-Provide a reproducible before/after measurement for the performance work described
-in ``PERFORMANCE_PLAN.md`` (primarily: removing deep copies from
+Provide a reproducible before/after measurement for the performance work recorded
+in ``CHANGELOG.md`` (primarily: removing deep copies from
 ``traverse_geojson_geometries``).
 
 These tests are **opt-in** and skipped by default so they never slow down or flake
@@ -154,9 +154,7 @@ def test_densify_performs_no_deep_copies(test_dir):
         densify_geojson_object(config, obj)
 
     print(f"\n[benchmark] deep model_copy calls during densify: {counter.count}")
-    assert counter.count == 0, (
-        f"expected zero deep copies after the optimization, got {counter.count}; see PERFORMANCE_PLAN.md workstream A"
-    )
+    assert counter.count == 0, f"expected zero deep copies after the optimization, got {counter.count}"
 
 
 def test_densify_mutates_input_in_place(test_dir):

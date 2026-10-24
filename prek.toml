@@ -23,6 +23,9 @@ rev = "v2.4.0"
 
 [[repos.hooks]]
 id = "mypy"
+# Match the CI invocation (`mypy src/`); tests and util.py are intentionally
+# unannotated (see ruff per-file-ignores for ANN).
+files = "^src/"
 additional_dependencies = ["pydantic"]
 
 [[repos]]
