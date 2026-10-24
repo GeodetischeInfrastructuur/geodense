@@ -119,19 +119,16 @@ ______________________________________________________________________
 Do **after** Workstream A. Keep each item behind its own measurement.
 
 > **Status update (after A landed):**
-> - **B1 (orjson): rejected.** `json.loads` is only ~36 ms; the parse cost is
->   geojson-pydantic validation, not JSON decoding. orjson showed no measurable
->   gain on decode and cannot match the `indent=1`/`indent=4` output on encode. Not
->   worth a dependency.
-> - **B2 (reduce load-time validation): rejected as scoped.** Load-time validation
->   is only ~165 ms, and the realistic save is ~150 ms (~14% of densify) against
->   real risk: `model_construct()` does not build nested models (breaks the
->   `isinstance(..., Feature/CrsFeatureCollection)` checks throughout `lib.py`), and
->   skipping validation drops rejection of malformed input. Only worth doing fused
->   with B3 as one raw-representation rewrite — deferred.
-> - **New finding → see Workstream C.** Profiling the *densify* phase (the real
->   ~1.06 s cost, not parsing) shows the bottleneck is per-point work inside the
->   interpolation loop, independent of the parsing library. That is the better
+>
+> - **B1 (orjson): rejected.** `json.loads` is only ~36 ms; the parse cost is geojson-pydantic validation, not JSON
+>   decoding. orjson showed no measurable gain on decode and cannot match the `indent=1`/`indent=4` output on encode.
+>   Not worth a dependency.
+> - **B2 (reduce load-time validation): rejected as scoped.** Load-time validation is only ~165 ms, and the realistic
+>   save is ~150 ms (~14% of densify) against real risk: `model_construct()` does not build nested models (breaks the
+>   `isinstance(..., Feature/CrsFeatureCollection)` checks throughout `lib.py`), and skipping validation drops rejection
+>   of malformed input. Only worth doing fused with B3 as one raw-representation rewrite — deferred.
+> - **New finding → see Workstream C.** Profiling the *densify* phase (the real ~1.06 s cost, not parsing) shows the
+>   bottleneck is per-point work inside the interpolation loop, independent of the parsing library. That is the better
 >   target and is lower risk than B2/B3.
 
 ### B1. Faster JSON load/dump with `orjson` (low risk)
@@ -170,63 +167,59 @@ ______________________________________________________________________
 
 ## 3b. Workstream C — Optimize the densify inner loop (NEW, PRIMARY next step)
 
-Discovered by profiling the densify phase after A (gemeenten-40.json, ~1.37 s
-densify under cProfile). The cost is per-point work in the interpolation loop and
-is independent of the parsing library. Breakdown (cumulative):
+Discovered by profiling the densify phase after A (gemeenten-40.json, ~1.37 s densify under cProfile). The cost is
+per-point work in the interpolation loop and is independent of the parsing library. Breakdown (cumulative):
 
-- `interpolate_geodesic` ~0.75 s — of which pyproj `transformer.transform` is
-  ~0.31 s, called **one point at a time** 200k times.
+- `interpolate_geodesic` ~0.75 s — of which pyproj `transformer.transform` is ~0.31 s, called **one point at a time**
+  200k times.
 - `_round_coordinates` ~0.34 s — `round()` called 400k times, rebuilding NamedTuples.
-- `DenseConfig.get_coord_precision` + `CRS.is_geographic` + `CRS.is_projected`
-  ~0.18 s combined — these are **constant per `DenseConfig`** yet recomputed ~98k
-  times inside the hot loop (pyproj `is_geographic`/`is_projected` are not cheap).
+- `DenseConfig.get_coord_precision` + `CRS.is_geographic` + `CRS.is_projected` ~0.18 s combined — these are **constant
+  per `DenseConfig`** yet recomputed ~98k times inside the hot loop (pyproj `is_geographic`/`is_projected` are not
+  cheap).
 
 ### C1. Cache per-config constants on `DenseConfig` — LOW RISK, DO FIRST
-In `src/geodense/models.py`, compute once in `__init__` and store as attributes:
-`is_projected`, `is_geographic`, and the coord precision (`get_coord_precision`
-result). Replace the repeated `self.src_crs.is_projected` /
-`self.src_crs.is_geographic` / `get_coord_precision()` lookups in the `lib.py` hot
-paths (`interpolate_geodesic`, `check_density_linestring`, `_add_vertices_to_line_segment`,
-`interpolate_src_proj`) with the cached values. Pure hoisting of invariants; output
-must be identical. Expected ~0.15-0.18 s off densify at near-zero risk.
+
+In `src/geodense/models.py`, compute once in `__init__` and store as attributes: `is_projected`, `is_geographic`, and
+the coord precision (`get_coord_precision` result). Replace the repeated `self.src_crs.is_projected` /
+`self.src_crs.is_geographic` / `get_coord_precision()` lookups in the `lib.py` hot paths (`interpolate_geodesic`,
+`check_density_linestring`, `_add_vertices_to_line_segment`, `interpolate_src_proj`) with the cached values. Pure
+hoisting of invariants; output must be identical. Expected ~0.15-0.18 s off densify at near-zero risk.
 
 ### C2. Batch the pyproj transform calls — EVALUATED, REJECTED
-`interpolate_geodesic` transforms `a`/`b` individually and back-transforms the
-intermediate points per point. pyproj `Transformer.transform` accepts arrays.
 
-**Outcome: rejected for this workload.** Measured findings (all gated on
-golden-output, which stayed byte-identical throughout):
-- Array transform only wins for larger batches: per-point vs array (20k reps) —
-  n=2 scalar 0.038s / batch 0.064s (**scalar wins**); n=5 ~tie; n=20 0.286 vs
-  0.160; n=100 2.263 vs 0.817 (batch 2.8x).
-- But the real distribution on gemeenten-40.json is tiny: of 97791 segments,
-  **median 0 / mean 0.05 intermediate points**, 97459 segments have ≤2 points and
-  only 205 have ≥5. So batching the back-transform is net neutral-to-negative.
-- Batching the forward a/b conversion into one 2-point array call made densify
-  *worse* (~967ms → ~1680ms): array-wrapping overhead exceeds the saving at n=2.
-  The ~196k forward `transform` calls are the dominant transform cost but can't be
-  batched profitably within a single 2-point segment.
-- A threshold guard (batch only when n≥~5) would help only ~0.2% of segments here —
-  not worth the added branching. Per this plan's own rule ("skip any that don't
-  measurably help"), C2 was reverted.
-- Only a cross-segment restructure (collect all endpoints across the whole input
-  and transform once) could batch the forward calls — that is effectively the
-  C/B3 raw-representation rewrite and is out of scope here.
+`interpolate_geodesic` transforms `a`/`b` individually and back-transforms the intermediate points per point. pyproj
+`Transformer.transform` accepts arrays.
+
+**Outcome: rejected for this workload.** Measured findings (all gated on golden-output, which stayed byte-identical
+throughout):
+
+- Array transform only wins for larger batches: per-point vs array (20k reps) — n=2 scalar 0.038s / batch 0.064s
+  (**scalar wins**); n=5 ~tie; n=20 0.286 vs 0.160; n=100 2.263 vs 0.817 (batch 2.8x).
+- But the real distribution on gemeenten-40.json is tiny: of 97791 segments, **median 0 / mean 0.05 intermediate
+  points**, 97459 segments have ≤2 points and only 205 have ≥5. So batching the back-transform is net
+  neutral-to-negative.
+- Batching the forward a/b conversion into one 2-point array call made densify *worse* (~967ms → ~1680ms):
+  array-wrapping overhead exceeds the saving at n=2. The ~196k forward `transform` calls are the dominant transform cost
+  but can't be batched profitably within a single 2-point segment.
+- A threshold guard (batch only when n≥~5) would help only ~0.2% of segments here — not worth the added branching. Per
+  this plan's own rule ("skip any that don't measurably help"), C2 was reverted.
+- Only a cross-segment restructure (collect all endpoints across the whole input and transform once) could batch the
+  forward calls — that is effectively the C/B3 raw-representation rewrite and is out of scope here.
 
 ### C3. Reduce `_round_coordinates` overhead — LOW/MEDIUM RISK
-Called 400k times. Avoid re-wrapping when already at precision, and avoid the
-`len(position)` dimensionality re-check per call where the dimensionality is already
-known by the caller. Keep output byte-identical.
+
+Called 400k times. Avoid re-wrapping when already at precision, and avoid the `len(position)` dimensionality re-check
+per call where the dimensionality is already known by the caller. Keep output byte-identical.
 
 ### Acceptance criteria (Workstream C)
+
 - Golden-output test stays byte-for-byte green (non-negotiable).
 - Full suite + benchmark invariants green.
 - Measurable densify reduction reported from
   `GEODENSE_BENCH=1 pytest tests/test_benchmark.py::test_benchmark_phases -s`.
-- C1 first (safe), then C2/C3 each behind its own measurement; skip any that don't
-  measurably help.
+- C1 first (safe), then C2/C3 each behind its own measurement; skip any that don't measurably help.
 
----
+______________________________________________________________________
 
 ## 4. Shared deliverable — benchmark + golden-output harness (DO FIRST)
 
