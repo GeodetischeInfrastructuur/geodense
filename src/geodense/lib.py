@@ -7,7 +7,7 @@ import tempfile
 from collections.abc import Callable, Iterable, Sequence
 from enum import Enum
 from functools import partial
-from typing import TextIO, cast
+from typing import Any, TextIO, cast
 
 from geojson_pydantic import (
     Feature,
@@ -30,6 +30,7 @@ from geodense.geojson import CrsFeatureCollection
 from geodense.models import DEFAULT_PRECISION_METERS, DenseConfig, GeodenseError
 from geodense.types import (
     GeojsonCoordinates,
+    GeojsonFeature,
     GeojsonGeomNoGeomCollection,
     GeojsonObject,
     Nested,
@@ -190,7 +191,7 @@ def check_density_file(  # noqa: PLR0913, PLR0917
 def _report_line_string_to_geojson(
     report: list[ReportLineString], src_crs_auth_code: str | None
 ) -> CrsFeatureCollection:
-    features: list[Feature] = [
+    features: list[GeojsonFeature] = [
         Feature(
             type="Feature",
             properties={"segment_length": x[0]},
@@ -252,7 +253,7 @@ def densify_file(  # noqa: PLR0913, PLR0917
 def transform_linestrings_in_coordinates(
     coordinates: GeojsonCoordinates,
     callback: Callable[[GeojsonCoordinates], T],
-) -> Nested | T | None:
+) -> Nested[T] | T | None:
     # when point geometry return None, since we only want to operate on linestring-like coordinates sequences
     if isinstance(coordinates, tuple):
         return None
@@ -290,14 +291,14 @@ def traverse_linestrings_in_coordinates(
 
 
 def traverse_geojson_geometries(
-    geojson: Feature | CrsFeatureCollection | Geometry,
+    geojson: GeojsonFeature | CrsFeatureCollection | Geometry,
     geometry_callback: Callable[[Geometry], None] | None = None,
-    node_callback: Callable | None = None,
-) -> Feature | CrsFeatureCollection | Geometry:
+    node_callback: Callable[[GeojsonFeature | CrsFeatureCollection | Geometry], None] | None = None,
+) -> GeojsonFeature | CrsFeatureCollection | Geometry:
     """Mutates the input in place and returns it; copy the object first if you need to retain the original."""
     _self: Callable[
-        [Feature | CrsFeatureCollection | Geometry],
-        Feature | CrsFeatureCollection | Geometry,
+        [GeojsonFeature | CrsFeatureCollection | Geometry],
+        GeojsonFeature | CrsFeatureCollection | Geometry,
     ] = partial(
         traverse_geojson_geometries,
         geometry_callback=geometry_callback,
@@ -305,18 +306,19 @@ def traverse_geojson_geometries(
     )
 
     if isinstance(geojson, Feature):
-        feature = cast(Feature, geojson)
+        feature = geojson
         geom = cast(GeojsonGeomNoGeomCollection, feature.geometry)
         try:
-            feature.geometry = _self(geom)
+            feature.geometry = cast(Geometry, _self(geom))
         except InfValCoordinateError as _:
             feature.geometry = None
 
     elif isinstance(geojson, CrsFeatureCollection):
-        feature_collection = cast(CrsFeatureCollection, geojson)
-        feature_collection.features = list(map(_self, feature_collection.features))
+        feature_collection = geojson
+        _feature_self = cast(Callable[[GeojsonFeature], GeojsonFeature], _self)
+        feature_collection.features = list(map(_feature_self, feature_collection.features))
     elif isinstance(geojson, GeometryCollection):
-        geometry_collection = cast(GeometryCollection, geojson)
+        geometry_collection = geojson
         __self = cast(Callable[[Geometry], Geometry], _self)
         geometry_collection.geometries = list(map(__self, geometry_collection.geometries))
     elif isinstance(
@@ -324,7 +326,7 @@ def traverse_geojson_geometries(
         Point | MultiPoint | LineString | MultiLineString | Polygon | MultiPolygon,
     ):
         if geometry_callback is not None:
-            geometry_callback(cast(GeojsonGeomNoGeomCollection, geojson))
+            geometry_callback(geojson)
 
     if node_callback:
         node_callback(geojson)
@@ -333,29 +335,28 @@ def traverse_geojson_geometries(
 
 
 def transform_geojson_geometries(
-    geojson: (Feature | CrsFeatureCollection | GeojsonGeomNoGeomCollection | GeometryCollection),
+    geojson: (GeojsonFeature | CrsFeatureCollection | GeojsonGeomNoGeomCollection | GeometryCollection),
     geometry_callback: Callable[[GeojsonGeomNoGeomCollection], T],
-) -> Nested | T:
+) -> Nested[T] | T:
     _self = partial(transform_geojson_geometries, geometry_callback=geometry_callback)
 
     if isinstance(geojson, Feature):
-        feature = cast(Feature, geojson)
+        feature = geojson
         geom = cast(GeojsonGeomNoGeomCollection, feature.geometry)
         return _self(geom)
 
     elif isinstance(geojson, CrsFeatureCollection):
-        feature_collection: CrsFeatureCollection = cast(CrsFeatureCollection, geojson)
+        feature_collection = geojson
         return list(map(_self, feature_collection.features))
     elif isinstance(geojson, GeometryCollection):
-        geometry_collection = cast(GeometryCollection, geojson)
+        geometry_collection = geojson
         return list(map(_self, geometry_collection.geometries))
     else:
         #     isinstance(
         #     geojson,
         #     Point | MultiPoint | LineString | MultiLineString | Polygon | MultiPolygon,
         # ):
-        geom = cast(GeojsonGeomNoGeomCollection, geojson)
-        return geometry_callback(geom)
+        return geometry_callback(geojson)
 
 
 def interpolate_geodesic(a: Position, b: Position, densify_config: DenseConfig) -> LineStringCoords:
@@ -458,7 +459,7 @@ def interpolate_src_proj(a: Position, b: Position, densify_config: DenseConfig) 
             p_point: ShpPoint = ShpLineString([a, b]).interpolate(new_max_segment_length * (i + 1))
             p_2d = Position2D(longitude=p_point.coords[0][0], latitude=p_point.coords[0][1])
             if len(p_point.coords[0]) == THREE_DIMENSIONAL:
-                p: Position = Position3D(*p_2d, altitude=p_point.coords[0][2])  # type: ignore
+                p: Position = Position3D(*p_2d, altitude=p_point.coords[0][2])
             else:
                 p = p_2d
             new_points.append(p)
@@ -536,7 +537,7 @@ def _get_crs_geojson(
     return result_crs
 
 
-def _flatten(container: Nested) -> Iterable:
+def _flatten(container: Nested[Any]) -> Iterable[Any]:
     if isinstance(container, tuple | str):
         raise ValueError("var container should not be of type tuple or str")
 
@@ -570,7 +571,7 @@ def _is_linestring_geom(geometry_coordinates: GeojsonCoordinates) -> bool:
 def _transform_positions_in_coordinates(
     coordinates: GeojsonCoordinates,
     callback: Callable[[GeojsonCoordinates], T],
-) -> Nested | T:
+) -> Nested[T] | T:
     if not isinstance(coordinates, tuple):
         return list(map(lambda x: _transform_positions_in_coordinates(x, callback), coordinates))
     return callback(coordinates)

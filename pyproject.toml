@@ -170,3 +170,9 @@ plugins = "pydantic.mypy"
 
 warn_return_any = true
 warn_unused_configs = true
+# Catch missing / loose type annotations:
+disallow_untyped_defs = true     # every function must be annotated
+disallow_incomplete_defs = true  # no partially-annotated signatures
+disallow_any_generics = true     # generics must be parametrised (e.g. Feature[...], Nested[...])
+warn_redundant_casts = true      # flag cast() calls that narrowing already covers
+warn_unused_ignores = true       # flag stale `# type: ignore` comments
