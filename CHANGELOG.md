@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **BREAKING:** `pyproj` is pinned to the NSGI build `3.7.2.post1` via `[tool.uv.sources]` (GitHub-release wheel, cp312
   only).
 - `geojson-pydantic` dependency tightened to `>=2,<3` (was `>=1,<3`).
+- `shapely` range widened to `>=2.0.6,<2.3.0` (was `<2.2.0`); verified against shapely 2.2.
 - Distribution: geodense is now published as a wheel on the GitHub releases page instead of PyPI.
 
 ### Performance
