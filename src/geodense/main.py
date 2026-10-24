@@ -5,7 +5,6 @@ import sys
 from collections.abc import Callable
 from enum import Enum
 from functools import wraps
-from typing import Any
 
 from rich_argparse import RichHelpFormatter
 
@@ -20,9 +19,9 @@ from geodense.models import DEFAULT_MAX_SEGMENT_LENGTH, GeodenseError
 logger = logging.getLogger("geodense")
 
 
-def cli_exception_handler(f: Callable) -> Callable:
+def cli_exception_handler[**P, R](f: Callable[P, R]) -> Callable[P, R]:
     @wraps(f)
-    def decorated(*args, **kwargs) -> Any:  # noqa: ANN002, ANN003, ANN401
+    def decorated(*args: P.args, **kwargs: P.kwargs) -> R:
         try:
             return f(*args, **kwargs)
         except GeodenseError as e:

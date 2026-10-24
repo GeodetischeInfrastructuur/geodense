@@ -1,7 +1,8 @@
 import re
-from typing import Literal
+from typing import Any, Literal
 
-from geojson_pydantic import FeatureCollection
+from geojson_pydantic import Feature, FeatureCollection
+from geojson_pydantic.geometries import Geometry
 from pydantic import BaseModel, Field
 
 from geodense.models import GeodenseError
@@ -18,7 +19,7 @@ class GeoJsonCrs(BaseModel):
     type: Literal["name"] = "name"
 
 
-class CrsFeatureCollection(FeatureCollection):
+class CrsFeatureCollection(FeatureCollection[Feature[Geometry, Any]]):
     crs: GeoJsonCrs | None = None
     name: str | None = None
 

@@ -3,6 +3,7 @@ import logging
 import sys
 from importlib.metadata import PackageNotFoundError, version
 from logging import Formatter, NullHandler, StreamHandler
+from typing import TextIO
 
 logging.getLogger(__name__).addHandler(NullHandler())
 
@@ -10,7 +11,7 @@ with contextlib.suppress(PackageNotFoundError):
     __version__ = version("geodense")
 
 
-def get_log_handler(verbose: bool) -> logging.StreamHandler:
+def get_log_handler(verbose: bool) -> logging.StreamHandler[TextIO]:
     formatter = get_formatter(verbose)
     handler = logging.StreamHandler(stream=sys.stderr)
     handler.setFormatter(formatter)
@@ -31,7 +32,7 @@ def get_formatter(verbose: bool) -> Formatter:
 # error handling convention:
 # expected caught errors -> log as error
 # unexpected caugh errors (this is the case for a generic error handler) -> log as exception
-def add_stderr_logger(verbose: bool = False) -> StreamHandler:
+def add_stderr_logger(verbose: bool = False) -> StreamHandler[TextIO]:
     """
     Adding streamhandler to the logger, used for CLI output to stderr.
 
