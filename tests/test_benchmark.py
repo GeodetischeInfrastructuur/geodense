@@ -117,7 +117,7 @@ def test_benchmark_phases(test_dir):
 
     _timeit("parse (json + validation)", lambda: _fresh_obj(test_dir))
 
-    obj, config = _load(test_dir)
+    obj, _config = _load(test_dir)
     _timeit("single full-tree deep copy", lambda: obj.model_copy(deep=True))
 
     # densify mutates/returns, so reload a fresh object each repeat for a fair number
@@ -155,8 +155,7 @@ def test_densify_performs_no_deep_copies(test_dir):
 
     print(f"\n[benchmark] deep model_copy calls during densify: {counter.count}")
     assert counter.count == 0, (
-        f"expected zero deep copies after the optimization, got {counter.count}; "
-        "see PERFORMANCE_PLAN.md workstream A"
+        f"expected zero deep copies after the optimization, got {counter.count}; see PERFORMANCE_PLAN.md workstream A"
     )
 
 
@@ -190,7 +189,7 @@ def test_benchmark_large_input(test_dir):
         obj.features = [feat.model_copy(deep=True) for _ in range(multiplier) for feat in base.features]
         return obj
 
-    print(f"\n[benchmark] large input: {multiplier}x {BENCH_FILE} " f"(~{multiplier * len(base.features)} features)")
+    print(f"\n[benchmark] large input: {multiplier}x {BENCH_FILE} (~{multiplier * len(base.features)} features)")
 
     _timeit("densify_geojson_object (large)", lambda: densify_geojson_object(config, _build()), repeat=1)
     check_obj = _build()

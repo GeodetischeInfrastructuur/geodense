@@ -1,5 +1,5 @@
 from collections.abc import Sequence
-from typing import TypeAlias, TypeVar
+from typing import TypeVar
 
 from geojson_pydantic import (
     Feature,
@@ -24,15 +24,13 @@ from geodense.geojson import CrsFeatureCollection
 
 T = TypeVar("T")
 
-GeojsonGeomNoGeomCollection: TypeAlias = Point | MultiPoint | LineString | MultiLineString | Polygon | MultiPolygon
+type GeojsonGeomNoGeomCollection = Point | MultiPoint | LineString | MultiLineString | Polygon | MultiPolygon
 
-GeojsonObject: TypeAlias = Feature | CrsFeatureCollection | Geometry | GeometryCollection
+type GeojsonObject = Feature | CrsFeatureCollection | Geometry | GeometryCollection
 
-GeojsonCoordinates: TypeAlias = (
-    Position | MultiPointCoords | LineStringCoords | MultiLineStringCoords | MultiPolygonCoords
-)
+type GeojsonCoordinates = Position | MultiPointCoords | LineStringCoords | MultiLineStringCoords | MultiPolygonCoords
 
 
-Nested: TypeAlias = Sequence[T | None | "Nested"]
+type Nested[T] = Sequence[T | "Nested" | None]
 
 ReportLineString = tuple[float, tuple[Position, Position]]
