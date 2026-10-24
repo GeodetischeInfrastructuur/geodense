@@ -3,7 +3,6 @@
 [![Code Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fgeodetischeinfrastructuur.github.io%2Fgeodense%2Fbadge.json&style=flat-square&logo=pytest&logoColor=white)](https://geodetischeinfrastructuur.github.io/geodense/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-teal.svg?style=flat-square)](https://www.python.org/downloads/release/python-31015/)
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)
-[![PyPI Version](https://img.shields.io/pypi/v/geodense.svg?style=flat-square)](https://pypi.python.org/pypi/geodense)
 
 Python library and CLI tool to **check density** and **densify** geometries using the geodesic (ellipsoidal
 great-circle) calculation for accurate CRS transformations.
@@ -11,26 +10,31 @@ great-circle) calculation for accurate CRS transformations.
 Implementation based on
 [*Eenduidige transformatie van grenzen tussen ETRS89 en RD*](https://gnss-data.kadaster.nl/misc/docs/langelijnenadvies.pdf)
 
-Depends on the following Python packages with binary dependencies (installed through [`uv`](https://docs.astral.sh/uv/)
-or [`pip`](https://pypi.org/project/pip/)):
+Depends on the following Python packages with binary dependencies (installed through
+[`uv`](https://docs.astral.sh/uv/)):
 
-- [`pyproj`](https://pyproj4.github.io/pyproj/stable/installation.html): requires libproj
+- [`pyproj`](https://pyproj4.github.io/pyproj/stable/installation.html): requires libproj (NSGI build, see
+  [Installation](#installation))
 - [`shapely`](https://shapely.readthedocs.io/en/stable/index.html): requires libgeos
 
 ## Installation
 
-Install with either [`uv`](https://docs.astral.sh/uv/) or [`pip`](https://pypi.org/project/pip/):
+As of v3, geodense is **no longer published on PyPI**. It depends on the NSGI build of `pyproj` (see
+[NSGI transformations](DOCS.md#nsgi-transformations)), which is only available from GitHub releases, so geodense is
+distributed as a wheel attached to the
+[GitHub releases page](https://github.com/GeodetischeInfrastructuur/geodense/releases). Install it with
+[`uv`](https://docs.astral.sh/uv/), so that the `pyproj` pin in `[tool.uv.sources]` is honoured (plain `pip` does not
+resolve it automatically):
 
 ```sh
-# pip
-pip install geodense
-
-# uv: run as cli tool
-uvx geodense
+# uv: run as cli tool (replace <version> and use the wheel URL from the release page)
+uvx --from https://github.com/GeodetischeInfrastructuur/geodense/releases/download/<version>/geodense-<version>-py3-none-any.whl geodense
 
 # uv: add as dependency to project
-uv add geodense
+uv add https://github.com/GeodetischeInfrastructuur/geodense/releases/download/<version>/geodense-<version>-py3-none-any.whl
 ```
+
+The NSGI `pyproj` wheel is only built for CPython 3.12 on Linux x86_64 (`cp312`, `linux_x86_64`).
 
 ## Usage CLI
 
@@ -55,8 +59,8 @@ Created by https://www.nsgi.nl/
 
 ## Usage Docs
 
-See [`DOCS.md`](https://github.com/GeodetischeInfrastructuur/geodense/blob/main/DOCS.md) for usage docs; for now only
-containing flow-charts of the `densify` and `check-densify` subcommands.
+See [`DOCS.md`](https://github.com/GeodetischeInfrastructuur/geodense/blob/main/DOCS.md) for usage docs: a flow-chart of
+the `densify` subcommand, NSGI transformation requirements and library usage notes.
 
 ## Developer Docs
 
