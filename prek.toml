@@ -8,7 +8,7 @@ args = []
 
 [[repos]]
 repo = "https://github.com/astral-sh/ruff-pre-commit"
-rev = "v0.6.9"
+rev = "v0.17.2"
 
 [[repos.hooks]]
 id = "ruff"
@@ -19,7 +19,7 @@ id = "ruff-format"
 
 [[repos]]
 repo = "https://github.com/pre-commit/mirrors-mypy"
-rev = "v1.11.2"
+rev = "v2.4.0"
 
 [[repos.hooks]]
 id = "mypy"

@@ -5,7 +5,7 @@ import sys
 from collections.abc import Callable
 from enum import Enum
 from functools import wraps
-from typing import Any, Literal
+from typing import Any
 
 from rich_argparse import RichHelpFormatter
 
@@ -36,7 +36,7 @@ def cli_exception_handler(f: Callable) -> Callable:
 
 
 @cli_exception_handler
-def densify_cmd(  # noqa: PLR0913
+def densify_cmd(  # noqa: PLR0913, PLR0917
     input_file: str,
     output_file: str,
     overwrite: bool = False,
@@ -55,7 +55,7 @@ def densify_cmd(  # noqa: PLR0913
 
 
 @cli_exception_handler
-def check_density_cmd(  # noqa: PLR0913
+def check_density_cmd(  # noqa: PLR0913, PLR0917
     input_file: str,
     max_segment_length: float,
     overwrite: bool = False,
@@ -221,9 +221,9 @@ def main() -> None:
 
 
 class FileRequired(Enum):
-    exist: Literal["exist"] = "exist"
-    not_exist: Literal["not_exist"] = "not_exist"
-    either: Literal["either"] = "either"
+    exist = "exist"
+    not_exist = "not_exist"
+    either = "either"
 
 
 def is_json_file_arg(

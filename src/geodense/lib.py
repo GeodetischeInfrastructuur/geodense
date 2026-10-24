@@ -7,7 +7,7 @@ import tempfile
 from collections.abc import Callable, Iterable, Sequence
 from enum import Enum
 from functools import partial
-from typing import Literal, TextIO, cast
+from typing import TextIO, cast
 
 from geojson_pydantic import (
     Feature,
@@ -153,7 +153,7 @@ def _validate_dependent_file_args(
             os.remove(output_file_path)
 
 
-def check_density_file(  # noqa: PLR0913
+def check_density_file(  # noqa: PLR0913, PLR0917
     input_file_path: str,
     max_segment_length: float,
     density_check_report_path: str | None = None,
@@ -204,7 +204,7 @@ def _report_line_string_to_geojson(
     return result
 
 
-def densify_file(  # noqa: PLR0913
+def densify_file(  # noqa: PLR0913, PLR0917
     input_file_path: str,
     output_file_path: str,
     overwrite: bool = False,
@@ -484,16 +484,16 @@ def textio_to_geojson(src: TextIO) -> GeojsonObject:
         geojson_type = src_json["type"]
         constructor = type_map[geojson_type]
     except KeyError as e:
-        message = f'received invalid GeoJSON file, loc: `.type`, value: `{src_json["type"]}`, expected one of: {", ".join(list(type_map.keys()))}'
+        message = f"received invalid GeoJSON file, loc: `.type`, value: `{src_json['type']}`, expected one of: {', '.join(list(type_map.keys()))}"
         raise GeodenseError(message) from e
     geojson_obj: GeojsonObject = constructor(**src_json)
     return geojson_obj
 
 
 class Has3D(Enum):
-    all: Literal["all"] = "all"
-    some: Literal["some"] = "some"
-    none: Literal["none"] = "none"
+    all = "all"
+    some = "some"
+    none = "none"
 
 
 def _get_crs_geojson(

@@ -40,11 +40,11 @@ pyproj = { url = "https://github.com/GeodetischeInfrastructuur/transformations/r
 [dependency-groups]
 dev = [
     "prek>=0.3.1",
-    "ruff==0.6.9",
+    "ruff==0.17.2",
     "yamllint>=1.35.1",
     "cli-test-helpers == 4.0.0",
     "coverage==7.6.1",
-    "mypy==1.11.2",
+    "mypy==2.4.0",
     "mypy-extensions==1.0.0",
     "pytest==8.3.2",
     "pytest-env==1.1.3",
