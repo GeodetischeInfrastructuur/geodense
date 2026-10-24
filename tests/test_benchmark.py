@@ -193,7 +193,6 @@ def test_benchmark_large_input(test_dir):
     print(f"\n[benchmark] large input: {multiplier}x {BENCH_FILE} "
           f"(~{multiplier * len(base.features)} features)")
 
-    obj = _build()
     _timeit("densify_geojson_object (large)", lambda: densify_geojson_object(config, _build()), repeat=1)
     check_obj = _build()
     _timeit(
