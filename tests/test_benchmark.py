@@ -104,11 +104,11 @@ class _DeepCopyCounter:
                 counter.count += 1
             return counter._original(self_model, *args, **kwargs)
 
-        BaseModel.model_copy = patched  # type: ignore[method-assign]
+        BaseModel.model_copy = patched  # type: ignore[method-assign, assignment]
         return self
 
     def __exit__(self, *exc: Any) -> None:
-        BaseModel.model_copy = self._original  # type: ignore[method-assign]
+        BaseModel.model_copy = self._original  # type: ignore[method-assign, assignment]
 
 
 def test_benchmark_phases(test_dir):
@@ -190,8 +190,7 @@ def test_benchmark_large_input(test_dir):
         obj.features = [feat.model_copy(deep=True) for _ in range(multiplier) for feat in base.features]
         return obj
 
-    print(f"\n[benchmark] large input: {multiplier}x {BENCH_FILE} "
-          f"(~{multiplier * len(base.features)} features)")
+    print(f"\n[benchmark] large input: {multiplier}x {BENCH_FILE} " f"(~{multiplier * len(base.features)} features)")
 
     _timeit("densify_geojson_object (large)", lambda: densify_geojson_object(config, _build()), repeat=1)
     check_obj = _build()
