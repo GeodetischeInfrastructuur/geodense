@@ -28,28 +28,24 @@ The NSGI `pyproj` wheel is only built for CPython 3.12 on Linux x86_64 (`cp312`,
 
 ### Running the CLI
 
-Install and run the CLI with [`uv`](https://docs.astral.sh/uv/). Because geodense's `pyproj` pin is a direct wheel URL
-declared in `[tool.uv.sources]`, you must supply that source when installing, otherwise `pyproj==3.7.2.post1` is looked
-up on PyPI (where the NSGI build does not exist). The simplest way is to install geodense from a checkout/export of this
-repository (which carries the `[tool.uv.sources]` entry), or to pass the `pyproj` URL explicitly:
+Install and run the CLI with [`uv`](https://docs.astral.sh/uv/). The NSGI `pyproj` wheel is declared as a direct-URL
+dependency in geodense's project metadata, so installers resolve it from GitHub rather than looking up the version on
+PyPI. You only need to provide the geodense wheel URL:
 
 ```sh
-# uv: run as a tool, resolving the NSGI pyproj wheel alongside geodense
+# uv: run as a tool; geodense metadata selects the NSGI pyproj wheel
 # (replace <version>; use the wheel URLs from the respective release pages)
 uvx \
-  --with https://github.com/GeodetischeInfrastructuur/transformations/releases/download/9.7.1-post1-rc17/pyproj-3.7.2.post1-cp312-cp312-linux_x86_64.whl \
   --from https://github.com/GeodetischeInfrastructuur/geodense/releases/download/<version>/geodense-<version>-py3-none-any.whl \
   geodense
 ```
 
 ### Depending on geodense from another project
 
-> **Important:** `[tool.uv.sources]` is **not** part of a built wheel's metadata. When you build your own package,
-> geodense's `pyproj` source pin does **not** travel into your wheel — your `Requires-Dist` will only say
-> `pyproj==3.7.2.post1`. Consumers of *your* package therefore have to resolve the NSGI `pyproj` wheel themselves.
+The geodense wheel metadata includes the direct URL for the NSGI `pyproj` wheel. It is a transitive dependency, so
+consumers do not need to repeat the `pyproj` URL or add a `[tool.uv.sources]` entry for `pyproj`.
 
-To depend on geodense, add **both** the geodense wheel **and** the NSGI `pyproj` source to your own `pyproject.toml`,
-and install with `uv` (plain `pip` does not read `[tool.uv.sources]`):
+For a uv application, add the geodense wheel and the NSGI `pyproj` wheel to your project configuration:
 
 ```toml
 [project]
@@ -60,13 +56,11 @@ dependencies = [
 
 [tool.uv.sources]
 geodense = { url = "https://github.com/GeodetischeInfrastructuur/geodense/releases/download/<version>/geodense-<version>-py3-none-any.whl" }
-# geodense pins pyproj to the NSGI build, but that source pin is not carried in
-# geodense's wheel metadata, so it must be declared here as well:
-pyproj = { url = "https://github.com/GeodetischeInfrastructuur/transformations/releases/download/9.7.1-post1-rc17/pyproj-3.7.2.post1-cp312-cp312-linux_x86_64.whl" }
 ```
 
-If your package is in turn consumed by others, this same `[tool.uv.sources]` block has to be repeated at each level of
-the dependency chain — there is currently no way to propagate it through wheel metadata.
+The current NSGI wheel is for CPython 3.12 on Linux x86_64. The direct-URL dependency is guarded by environment markers;
+outside that environment, it does not select a stock `pyproj` fallback. If NSGI wheels become available for more Python
+versions or platforms, add a direct-URL dependency for each supported wheel with matching environment markers.
 
 ## Usage CLI
 
