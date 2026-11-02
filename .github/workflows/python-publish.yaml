@@ -4,8 +4,6 @@ on:
     types: [published]
 permissions:
   contents: write  # required to upload assets to the release
-env:
-  PYTHON_VERSION: "3.12"
 jobs:
   deploy:
     runs-on: ubuntu-24.04
@@ -14,20 +12,18 @@ jobs:
         with:
           fetch-depth: 0  # to fetch all history for all branches and tags; required because we derive app version from latest tag
           fetch-tags: true
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
       - name: Install uv
         uses: astral-sh/setup-uv@v3  # dont specify version, use latest stable version
-      - name: Install dependencies
-        run: |
-          uv sync
-      - name: Set env PATH
-        run: echo "PATH="$(pwd)/.venv/bin:$PATH"" >> $GITHUB_ENV
-      - name: Set env PROJ_DIR
-        run: echo "PROJ_DIR="$(pwd)/.venv/lib/python${PYTHON_VERSION}/site-packages/pyproj/proj_dir/share/proj"" >> $GITHUB_ENV
       - name: Build package
-        run: uv build --wheel
+        run: uv build --wheel --python "3.12"
       - name: Attach wheel to GitHub release
         # geodense is distributed via the GitHub releases page, not PyPI,
-        # because it pins the NSGI pyproj wheel which is only published there.
+        # because it depends on NSGI pyproj wheels published there. geodense
+        # itself is pure Python, so publish its single universal wheel.
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "${{ github.event.release.tag_name }}" dist/*.whl --clobber
