@@ -36,9 +36,15 @@ coverage run -p --source=src/geodense -m pytest -v tests && coverage report --da
 
 ## Creating release
 
-New releases are build and published through the Github Action
-[_Build and Publish to PyPI_](.github/workflows/python-publish.yaml). Workflow is triggered when a new release is
-created in this Github repository.
+New releases are built and published through the GitHub Action
+[_Build and Publish Release_](.github/workflows/python-publish.yaml). The workflow is triggered when a new release is
+created in the GitHub repository.
+
+The release workflow:
+
+1. Builds the geodense wheel
+2. Attaches it to the GitHub release
+3. **Note:** geodense is no longer published to PyPI (as of v3) due to NSGI `pyproj` direct-URL dependency
 
 ### Manual build
 
@@ -49,10 +55,16 @@ rm -rf dist/* # clean dist folder before build
 uv build --wheel
 ```
 
-Check wheel contains expected files:
+Verify the wheel contents:
 
 ```sh
-unzip dist/geodense-0.0.1a3-py3-none-any.whl -d geodense-whl
+unzip dist/geodense-*.whl -d geodense-whl
 tree geodense-whl
 rm -rf geodense-whl
 ```
+
+### Distributing a release
+
+1. Create a new release tag in GitHub (e.g., `v3.0.0`)
+2. The _Build and Publish Release_ workflow automatically builds and attaches the wheel
+3. Users install via: `uvx --from https://github.com/.../geodense-<version>-py3-none-any.whl geodense`
