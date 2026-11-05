@@ -1,7 +1,7 @@
 # geodense
 
 [![Code Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fgeodetischeinfrastructuur.github.io%2Fgeodense%2Fbadge.json&style=flat-square&logo=pytest&logoColor=white)](https://geodetischeinfrastructuur.github.io/geodense/)
-[![Python 3.12](https://img.shields.io/badge/python-3.12-teal.svg?style=flat-square)](https://www.python.org/downloads/release/python-3120/)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-teal.svg?style=flat-square)](https://www.python.org/downloads/release/python-3120/)
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)
 
 Python library and CLI tool to **check density** and **densify** geometries using the geodesic (ellipsoidal
@@ -24,7 +24,8 @@ As of v3, geodense is **no longer published on PyPI**. It depends on the NSGI bu
 distributed as a wheel attached to the
 [GitHub releases page](https://github.com/GeodetischeInfrastructuur/geodense/releases).
 
-The NSGI `pyproj` wheel is only built for CPython 3.12 on Linux x86_64 (`cp312`, `linux_x86_64`).
+The NSGI `pyproj` wheels are built for CPython 3.12–3.15 on Linux x86_64. Support for additional platforms and Python
+versions depends on upstream NSGI `pyproj` wheels becoming available.
 
 ### Running the CLI
 
@@ -61,6 +62,24 @@ geodense = { url = "https://github.com/GeodetischeInfrastructuur/geodense/releas
 The current NSGI wheel is for CPython 3.12 on Linux x86_64. The direct-URL dependency is guarded by environment markers;
 outside that environment, it does not select a stock `pyproj` fallback. If NSGI wheels become available for more Python
 versions or platforms, add a direct-URL dependency for each supported wheel with matching environment markers.
+
+## Migration from v2 to v3
+
+**Breaking changes in v3:**
+
+- **Library API:** `densify_geojson_object()` and `traverse_geojson_geometries()` now **mutate their input in place**
+  and return the same instance. In v2 they returned a copy. If you need to retain the original, copy it first:
+  ```python
+  import copy
+
+  original_geojson = {...}
+  densified = densify_geojson_object(config, copy.deepcopy(original_geojson))
+  ```
+- **Python support:** Requires Python 3.12+ (was 3.10+).
+- **Distribution:** Now distributed as wheels on GitHub releases, not PyPI. Update your install commands to use the
+  direct URL.
+
+For full details, see the [CHANGELOG](CHANGELOG.md).
 
 ## Usage CLI
 
