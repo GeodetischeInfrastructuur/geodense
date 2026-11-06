@@ -5,17 +5,15 @@ on:
 permissions:
   contents: write  # required to upload assets to the release
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0  # to fetch all history for all branches and tags; required because we derive app version from latest tag
           fetch-tags: true
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version-file: .python-version
+      - name: Install uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2
       - name: Read Python version
         id: python-version
         run: echo "version=$(cat .python-version)" >> $GITHUB_OUTPUT
