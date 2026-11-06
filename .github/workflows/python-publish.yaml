@@ -6,20 +6,21 @@ permissions:
   contents: write  # required to upload assets to the release
 jobs:
   deploy:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0  # to fetch all history for all branches and tags; required because we derive app version from latest tag
           fetch-tags: true
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3  # dont specify version, use latest stable version
+          python-version-file: .python-version
+      - name: Read Python version
+        id: python-version
+        run: echo "version=$(cat .python-version)" >> $GITHUB_OUTPUT
       - name: Build package
-        run: uv build --wheel --python "3.12"
+        run: uv build --wheel --python "${{ steps.python-version.outputs.version }}"
       - name: Attach wheel to GitHub release
         # geodense is distributed via the GitHub releases page, not PyPI,
         # because it depends on NSGI pyproj wheels published there. geodense

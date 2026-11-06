@@ -1,23 +1,24 @@
 name: Run linting, type check and unit tests
 on:
   pull_request:
-env:
-  PYTHON_VERSION: "3.12"
 jobs:
   linting_and_tests:
     name: Linting, Type Check and Tests
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2
       - name: Install dependencies
         run: |
           uv sync
       - name: Set env PATH
         run: echo "PATH="$(pwd)/.venv/bin:$PATH"" >> $GITHUB_ENV
+      - name: Read Python version
+        id: python-version
+        run: echo "version=$(cat .python-version)" >> $GITHUB_OUTPUT
       - name: Set env PROJ_DIR
-        run: echo "PROJ_DIR="$(pwd)/.venv/lib/python${PYTHON_VERSION}/site-packages/pyproj/proj_dir/share/proj"" >> $GITHUB_ENV
+        run: echo "PROJ_DIR="$(pwd)/.venv/lib/python${{ steps.python-version.outputs.version }}/site-packages/pyproj/proj_dir/share/proj"" >> $GITHUB_ENV
       - name: Lint with ruff
         run: |
           ruff check -v .
